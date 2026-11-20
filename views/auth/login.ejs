@@ -2,14 +2,33 @@
 <div class="auth-card">
   <h1>Welcome back</h1>
   <p class="sub">Log in and we will take you to your own portal.</p>
-  <form method="post" action="/login">
+  <form method="post" action="/login" data-login-form>
     <%- include('../partials/csrf') %>
     <label class="f">Email address<input type="email" name="email" value="<%= email %>" required autofocus autocomplete="username" placeholder="you@example.com"></label>
     <label class="f">Password<input type="password" name="password" required autocomplete="current-password" placeholder="Your password"></label>
     <div class="row end" style="margin:-4px 0 18px"><a href="/forgot-password" class="small" style="text-decoration:underline;font-weight:600">Forgot password?</a></div>
     <button class="btn block lg">Log in</button>
   </form>
+
+  <!-- Live demo: one click fills in a demo account and logs in. -->
+  <div style="margin-top:22px;padding:18px;border-radius:18px;background:#f4f6ff;border:1px solid #e0e6ff">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
+      <strong style="font-size:15px">Try the live demo</strong>
+      <span class="badge blue">Password: Password123</span>
+    </div>
+    <p class="muted small" style="margin:0 0 12px">Click a role to log in instantly with a demo account.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button type="button" class="btn ghost sm" data-demo="patient@mediconnect.local">Patient</button>
+      <button type="button" class="btn ghost sm" data-demo="dr.farhana@mediconnect.local">Doctor</button>
+      <button type="button" class="btn ghost sm" data-demo="center@mediconnect.local">Diagnostic Center</button>
+      <button type="button" class="btn ghost sm" data-demo="pharmacy@mediconnect.local">Pharmacy</button>
+      <button type="button" class="btn ghost sm" data-demo="ambulance@mediconnect.local">Ambulance</button>
+      <button type="button" class="btn ghost sm" data-demo="admin@mediconnect.local">Admin</button>
+    </div>
+  </div>
+
   <p class="muted" style="text-align:center;margin-top:16px">New here? <a href="/register" style="text-decoration:underline;font-weight:600">Create account</a></p>
   <p class="muted small" style="text-align:center;margin-top:6px">Doctor, diagnostic center, medical shop or ambulance? <a href="/register">Choose your account type</a></p>
 </div>
+<script src="/js/demo-login.js" defer></script>
 <%- include('../partials/auth-bottom') %>
