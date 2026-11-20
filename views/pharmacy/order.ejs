@@ -1,0 +1,51 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Order <%= code(order.id) %> <% if (order.order_type === 'emergency') { %><span class="badge red lg"><span class="pulse-dot"></span> EMERGENCY</span><% } %></h1><p>Placed <%= friendly(order.created_at) %> by <%= order.patient_name %></p></div>
+  <div class="row"><%- order.status === 'received' ? pill('New order') : badge(order.status) %><%- !rx ? pill('No prescription', 'gray') : rx.verified || order.prescription_checked ? pill('Prescription verified', 'green') : pill('Prescription to check', 'amber') %></div></div>
+<form method="post" action="/pharmacy/orders/<%= order.id %>/accept" id="accept"><%- include('../partials/csrf') %></form>
+<div class="grid g-main">
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:12px">Medicines in prescription</h2>
+      <table class="tbl"><tr><th>Medicine</th><th class="num">Qty</th><th>Stock</th><th class="num">Price</th><% if (order.status === 'received') { %><th class="num">Supply</th><% } else { %><th class="num">Supplied</th><% } %></tr>
+        <% for (const i of items) { const can = Math.min(i.quantity, i.stock); %><tr><td><b><%= i.name %> <%= i.strength %></b> <% if (i.rx_required) { %><%- pill('Rx', 'amber') %><% } %></td><td class="num"><%= i.quantity %></td>
+          <td><%- i.stock >= i.quantity ? pill('In stock', 'green') : i.stock > 0 ? pill(i.stock + ' left', 'amber') : pill('Out of stock', 'red') %></td><td class="num"><b><%= money(i.unit_price * i.quantity) %></b></td>
+          <td class="num"><% if (order.status === 'received') { %><input type="number" name="qty_<%= i.id %>" min="0" max="<%= can %>" value="<%= can %>" form="accept" style="margin:0;max-width:80px;margin-left:auto"><% } else { %><%= i.fulfilled_quantity ?? '—' %><% } %></td></tr><% } %></table>
+    </section>
+    <section class="card"><h2 style="margin-bottom:14px">Update order status</h2>
+      <% const at = FLOW.indexOf(order.status); %>
+      <div class="stepper"><% FLOW.forEach((s, i) => { %><div class="st <%= at >= i ? 'done' : 'todo' %>"><i><%- icon('pill', 20) %></i><%= ['Order received','Preparing','Ready for delivery','Out for delivery','Delivered'][i] %></div><% }) %></div>
+      <% if (['rejected','cancelled'].includes(order.status)) { %><div class="alert error mt"><%= label(order.status) %><%= order.pharmacy_note ? ': ' + order.pharmacy_note : '' %></div><% } %>
+      <% const nxt = FLOW[at + 1]; if (order.accepted && nxt) { %>
+        <form method="post" action="/pharmacy/orders/<%= order.id %>/status" class="row mt"><%- include('../partials/csrf') %><input type="hidden" name="status" value="<%= nxt %>">
+          <% if (nxt === 'out_for_delivery') { %><input name="rider_name" placeholder="Rider name" required value="<%= order.rider_name || '' %>" style="margin:0;max-width:180px"><input name="rider_phone" placeholder="Rider phone" value="<%= order.rider_phone || '' %>" style="margin:0;max-width:160px"><% } %>
+          <button class="btn">Mark <%= label(nxt).toLowerCase() %></button></form>
+      <% } else if (!order.accepted && order.status === 'received') { %><p class="muted small mt">Respond to the order first.</p><% } %>
+    </section>
+    <section class="card"><h2 style="margin-bottom:12px">History</h2><div class="timeline"><% for (const h of history) { %><div class="tl"><span class="dot"></span><b style="font-size:15px"><%= label(h.status) %></b><span class="small"><%= friendly(h.created_at) %><%= h.note ? ' · ' + h.note : '' %></span></div><% } %></div></section>
+  </div>
+  <div class="stack">
+    <% if (order.status === 'received' && !order.accepted) { const short = items.filter(i => i.stock < i.quantity).length; %>
+    <section class="card"><h2 style="margin-bottom:12px">Respond to order</h2>
+      <% if (short) { %><div class="item" style="background:#fffbeb;border-color:#fde68a;display:block"><b><%= short %> medicine<%= short > 1 ? 's are' : ' is' %> short</b><div class="meta">You can fulfil the order partly.</div></div><% } %>
+      <% if (needsRxCheck) { %><label class="item" style="cursor:pointer"><input type="checkbox" name="prescription_verified" value="1" form="accept"><span><b>Prescription checked</b><div class="meta">Required for prescription-only medicines</div></span></label><% } %>
+      <input name="note" form="accept" placeholder="Note to patient (optional)">
+      <% if (!short) { %><button class="btn block lg mt-s" form="accept" name="mode" value="full">Accept order</button><% } %>
+      <button class="btn ghost block mt-s" form="accept" name="mode" value="partial" <%= fulfillable ? '' : 'disabled' %>>Fulfill partly (<%= fulfillable %> of <%= items.length %>)</button>
+      <form method="post" action="/pharmacy/orders/<%= order.id %>/reject" class="mt-s" data-confirm="Reject this order?"><%- include('../partials/csrf') %><input type="hidden" name="note" value="Medicines not available"><button class="btn danger block">Reject order</button></form>
+    </section>
+    <% } %>
+    <section class="card"><h2 style="margin-bottom:12px">Summary</h2>
+      <% const sub = order.total - order.delivery_fee; %>
+      <div class="row between"><span class="muted">Available items</span><b><%= money(sub) %></b></div>
+      <div class="row between mt-s"><span class="muted">Delivery</span><b><%= money(order.delivery_fee) %></b></div>
+      <div class="row between mt" style="border-top:1px solid var(--line);padding-top:12px"><b>Total</b><b style="font-size:24px;color:var(--ink)"><%= money(order.total) %></b></div>
+      <div class="mt-s"><%- pill(order.payment_method === 'cod' ? 'Cash on delivery' : (order.payment_provider ? order.payment_provider : 'Online') + ' · ' + label(order.payment_status)) %></div>
+      <p class="muted small mt-s"><%= order.delivery_address %><%= distance != null ? ' · ' + distance + ' km' : '' %> · About <%= pharmacy.delivery_minutes %> min</p>
+      <p class="muted small"><%= order.patient_phone %></p></section>
+    <section class="card soft"><div class="row nowrap"><span class="tile t-blue"><%- icon('shield', 22) %></span><h3>Prescription is read-only</h3></div>
+      <% if (rx) { %><p class="muted small mt-s"><%= rx.source === 'doctor' ? `Signed by ${rx.doctor_name} on ${shortDate(rx.created_at)}.` : 'Uploaded by the patient.' %> You can only process medicines as prescribed.</p>
+        <% for (const i of rxItems) { %><div class="small mt-s">• <%= i.name ? i.name + ' ' + (i.strength || '') : i.raw_name %> <%= i.dose ? '· ' + i.dose : '' %> <%= i.frequency ? '· ' + i.frequency : '' %> · ×<%= i.quantity %></div><% } %>
+        <% if (rx.image_path) { %><a class="btn ghost sm mt-s" href="/files/prescription/<%= rx.id %>" target="_blank">Open prescription file</a><% } %>
+      <% } else { %><p class="muted small mt-s">No prescription attached. Only over-the-counter medicines can be supplied.</p><% } %></section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

@@ -1,0 +1,26 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Ambulance tracking</h1><p><%= t.service_name %> · <%= t.vehicle_no %> · <%= t.kind %></p></div>
+  <span class="badge <%= ['arrived','completed'].includes(t.status) ? 'green' : ['declined','cancelled'].includes(t.status) ? 'red' : 'amber' %> lg"><span class="pulse-dot"></span> <span data-live-status><%= STATUS_TEXT[t.status] %></span></span></div>
+<div class="grid g-main">
+  <section class="card map-card"><div class="map lg" data-map data-target="amb" data-min-per-km="2.5" <%= ['requested','accepted','on_the_way','arrived'].includes(t.status) ? 'data-poll=/emergency/trips/' + t.id + '/poll data-every=5000' : '' %> data-points="<%= JSON.stringify(points) %>"></div></section>
+  <div class="stack">
+    <section class="card"><div class="steps-v">
+      <% const order = ['requested','accepted','on_the_way','arrived','completed']; const at = order.indexOf(t.status); %>
+      <% order.forEach((s, i) => { %><div class="sv <%= i < at ? 'done' : i === at ? 'now' : '' %>"><span></span><b><%= { requested: 'Requested', accepted: 'Accepted', on_the_way: 'On the way', arrived: 'Arrived', completed: 'Completed' }[s] %></b></div><% }) %>
+    </div></section>
+    <section class="card">
+      <div class="grid g2" style="gap:10px">
+        <div class="item" style="margin:0"><div><span class="muted small">Distance</span><div><b data-distance><%= away != null ? away + ' km' : '—' %></b></div></div></div>
+        <div class="item" style="margin:0"><div><span class="muted small">Arrives in</span><div><b data-eta><%= eta ? eta + ' min' : '—' %></b></div></div></div>
+      </div>
+      <div class="toggle-row"><span>Driver</span><b><%= t.driver_name || '—' %></b></div>
+      <div class="toggle-row"><span>Fare (estimate)</span><b><%= money(t.fare) %></b></div>
+      <div class="toggle-row"><span>Pickup</span><b><%= t.pickup_address || '—' %></b></div>
+      <% if (t.destination) { %><div class="toggle-row"><span>Hospital</span><b><%= t.destination %></b></div><% } %>
+      <div class="row mt-s"><% if (t.driver_phone && t.status !== 'requested') { %><a class="btn green" href="tel:<%= t.driver_phone %>"><%- icon('phone', 17) %> Call driver</a><% } %>
+        <% if (['requested','accepted','on_the_way'].includes(t.status)) { %><form method="post" action="/emergency/trips/<%= t.id %>/cancel" data-confirm="Cancel this ambulance?"><%- include('../partials/csrf') %><button class="btn danger">Cancel</button></form><% } %>
+        <% if (['declined','cancelled','completed'].includes(t.status)) { %><a class="btn" href="/emergency">Request another</a><% } %></div>
+    </section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

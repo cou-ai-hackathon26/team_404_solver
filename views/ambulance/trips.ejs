@@ -1,0 +1,6 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Trips</h1><p>All requests you received.</p></div></div>
+<section class="card"><div class="tbl-wrap"><table class="tbl"><tr><th>When</th><th>Patient</th><th>Pickup</th><th>Hospital</th><th>Distance</th><th>Fare</th><th>Status</th></tr>
+  <% for (const t of trips) { %><tr><td><%= fmtDateTime(t.created_at) %></td><td><b><%= t.patient_name %></b></td><td><%= t.pickup_address %></td><td><%= t.destination || '—' %></td><td><%= t.distance != null ? t.distance + ' km' : '—' %></td><td><%= money(t.fare) %></td><td><%- badge(t.status === 'completed' ? 'delivered' : t.status, label(t.status)) %></td></tr><% } %></table></div>
+  <% if (!trips.length) { %><div class="empty small">No trips yet.</div><% } %></section>
+<%- include('../partials/bottom') %>

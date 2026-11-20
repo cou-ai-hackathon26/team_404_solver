@@ -1,0 +1,16 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Shop profile</h1><p>Patients see these details when comparing pharmacies.</p></div><a class="btn ghost" href="/account">Password and devices</a></div>
+<form method="post" action="/pharmacy/profile" class="card"><%- include('../partials/csrf') %>
+  <div class="fgrid">
+    <label class="f">Shop name<input name="name" value="<%= pharmacy.name %>" required></label><label class="f">Drug license no.<input value="<%= pharmacy.license_no || '' %>" disabled></label>
+    <label class="f">Address<input name="address" value="<%= pharmacy.address || '' %>"></label><label class="f">Phone<input name="phone" value="<%= pharmacy.phone || '' %>"></label>
+    <label class="f">Typical delivery time (minutes)<input type="number" min="5" name="delivery_minutes" value="<%= pharmacy.delivery_minutes %>"></label><label class="f">Delivery fee (BDT)<input type="number" min="0" name="delivery_fee" value="<%= pharmacy.delivery_fee %>"></label>
+    <label class="f">Shop-wide discount (%)<input type="number" min="0" max="90" name="discount_pct" value="<%= pharmacy.discount_pct %>"></label><label class="f">Emergency delivery fee (BDT)<input type="number" min="0" name="emergency_fee" value="<%= pharmacy.emergency_fee %>"></label>
+    <label class="f">Emergency delivery time (minutes)<input type="number" min="5" name="emergency_minutes" value="<%= pharmacy.emergency_minutes %>"></label><label class="f">Regular delivery fee is lower<input value="Patients choose regular or emergency" disabled></label>
+    <label class="f">Latitude<input name="lat" value="<%= pharmacy.lat ?? '' %>"></label><label class="f">Longitude<input name="lng" value="<%= pharmacy.lng ?? '' %>"></label>
+  </div>
+  <div class="toggle-row"><b>Cash on delivery</b><label class="switch"><input type="checkbox" name="accepts_cod" value="1" <%= pharmacy.accepts_cod ? 'checked' : '' %>><span></span></label></div>
+  <div class="toggle-row"><b>Online payment</b><label class="switch"><input type="checkbox" name="accepts_online" value="1" <%= pharmacy.accepts_online ? 'checked' : '' %>><span></span></label></div>
+  <div class="row mt-s"><button class="btn">Save</button><button type="button" class="btn ghost" data-geolocate>Use my location</button></div>
+</form>
+<%- include('../partials/bottom') %>

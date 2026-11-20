@@ -1,0 +1,69 @@
+<%- include('../partials/top') %>
+<section class="hero compact med" style="align-items:flex-start;padding-bottom:110px">
+  <div><span class="chip"><%- icon('sparkles', 14) %> AI · বাংলা + English</span><h1>Find the right doctor</h1><p>Describe your problem in Bangla or English. AI suggests the specialty and shows verified doctors near you, with live distance.</p></div>
+  <%- include('../partials/stickers', { set: 'doctor' }) %>
+</section>
+<div class="grid g-main" style="margin-top:-86px;position:relative;z-index:2;padding:0 0 0 0">
+  <section class="card">
+    <form method="post" action="/patient/find-doctor"><%- include('../partials/csrf') %>
+      <label class="f">Symptoms, suspected conditions and history
+        <textarea name="description" required placeholder="যেমন: “হাতের হাড় ভেঙে গেছে”, “চামড়ায় চুলকানি”, “৩ দিন ধরে জ্বর আর মাথা ব্যথা” — or “skin rash”, “broken arm”, “chest pain when climbing stairs”." style="min-height:120px"><%= entry ? entry.description : '' %></textarea></label>
+      <div class="row between">
+        <div class="chips"><% for (const t of (result && result.terms) || []) { %><span class="chip" style="font-size:13px;padding:4px 12px"><%= t.replace(' (history)', '') %></span><% } %></div>
+        <button class="btn"><%- icon('sparkles', 18) %>Analyze with AI</button>
+      </div>
+      <div class="chips mt-s"><span class="muted small">Try:</span><% for (const ex of ['চামড়ায় চুলকানি আর ফুসকুড়ি', 'হাতের হাড় ভেঙে গেছে', 'দাঁতে ব্যথা', 'skin problem', 'broken arm', 'chest pain and palpitations']) { %><button type="button" class="chip example" data-example="<%= ex %>"><%= ex %></button><% } %></div>
+    </form>
+    <% if (history.length && !entry) { %>
+      <div class="mt"><span class="muted small">Recent checks</span>
+        <% for (const h of history) { %><a class="item mt-s" href="?entry=<%= h.id %>"><span class="grow"><%= h.description.slice(0, 90) %></span><span class="muted small"><%= shortDate(h.created_at) %></span></a><% } %></div>
+    <% } %>
+  </section>
+  <section class="card soft">
+    <h2 style="margin-bottom:14px">Suggested specialties</h2>
+    <% if (!result) { %><div class="empty small">Describe your symptoms to see suggestions. Or pick a specialty:</div>
+      <form method="get" class="mt-s"><select name="specialty"><option value="">Choose a specialty</option><% for (const s of SPECIALTIES) { %><option><%= s %></option><% } %></select><button class="btn ghost block mt-s">Show doctors</button></form>
+    <% } else { %>
+      <% result.specialties.forEach((s, i) => { %>
+        <a class="item" href="?entry=<%= entry.id %>&specialty=<%= encodeURIComponent(s.specialty) %>#results" style="background:#fff"><b class="grow" style="font-size:16px"><%= s.specialty %></b><%- i === 0 ? pill('Best match', 'amber') : pill('Also consider') %></a>
+      <% }) %>
+      <% if (specialty) { %><p class="small mt-s">Showing <b><%= specialty %></b> only · <a href="?entry=<%= entry.id %>#results">show all suggestions</a></p><% } %>
+    <% } %>
+  </section>
+</div>
+
+<% if (result && result.redFlags.length) { %>
+  <div class="alert error mt"><b>Some symptoms (<%= result.redFlags.join(', ') %>) can be serious.</b> If they are severe or sudden, call 999 or go to the nearest emergency department now.</div>
+<% } %>
+
+<% if (doctors.length || specialty || result) { %>
+<div class="row between mt" id="results"><h2>Recommended verified doctors</h2><span class="muted"><%= result && result.ai ? 'Matched by Claude AI · ' : '' %>Ranked by specialty, experience, availability, live distance and fee</span></div>
+<% if (doctors.fallback) { %><div class="alert info mt-s">No verified <%= (specialty || (result && result.specialties[0].specialty)) %> doctor is on MediConnect yet, so these General Medicine doctors can see you first and refer you.</div><% } %>
+<% if (doctors.length) { %>
+<section class="card mt-s map-card"><div class="row between"><b><%- icon('map', 18) %> Doctors near you</b><span class="muted small"><span class="pulse-dot"></span> <span data-gps>Finding your live location…</span></span></div>
+  <div class="map" data-map data-me="live" data-points="<%= JSON.stringify(points) %>"></div></section>
+<% } %>
+<form class="row mt-s" method="get"><% if (entry) { %><input type="hidden" name="entry" value="<%= entry.id %>"><% } %><% if (specialty) { %><input type="hidden" name="specialty" value="<%= specialty %>"><% } %>
+  <input name="maxFee" type="number" placeholder="Max fee (BDT)" value="<%= filters.maxFee || '' %>" style="max-width:180px;margin:0">
+  <input name="maxDistance" type="number" placeholder="Max distance (km)" value="<%= filters.maxDistance || '' %>" style="max-width:180px;margin:0" <%= profile.lat == null ? 'disabled' : '' %>>
+  <button class="btn ghost sm">Filter</button><% if (profile.lat == null) { %><span class="muted small">Add your location in <a href="/patient/profile">Profile</a> to filter by distance.</span><% } %></form>
+<% if (!doctors.length) { %><div class="empty mt-s">No verified doctors match. Try removing filters.</div><% } %>
+<div class="grid g3 mt-s">
+  <% doctors.forEach((d, i) => { %>
+    <article class="card" style="<%= i === 0 ? 'border:2px solid #6366f1' : '' %>">
+      <div class="row nowrap"><%- avatar(d.full_name, 'lg', d.user_id) %><div><h3 style="font-size:18px"><%= d.full_name %></h3><span class="muted"><%= d.specialty %> · <%= (d.address || '').split(',').pop().trim() %></span></div></div>
+      <div class="chips mt-s"><%- pill('Verified', 'green') %><%- pill(d.experience_years + ' years experience') %><% if (i === 0) { %><%- pill('Best match', 'amber') %><% } %><% if (d.isNew) { %><%- pill('New on MediConnect', 'purple') %><% } %><% if (d.live) { %><span class="badge red"><span class="pulse-dot"></span> Live location</span><% } %></div>
+      <div class="item mt-s"><div class="grow"><span class="muted small">Consultation fee</span><div><b><%= money(d.fee) %></b></div></div><div style="text-align:right"><span class="muted small">Next available</span><div><b><%= d.nextSlot ? friendly(d.nextSlot) : 'On request' %></b></div></div></div>
+      <p class="muted small mt-s"><%= km(d.distance) %> · match score <%= d.score %></p>
+      <a class="btn block mt-s" href="/patient/doctors/<%= d.user_id %><%= entry ? '?entry=' + entry.id : '' %>"><%- icon('calendar', 17) %> See fee & book a slot</a>
+    </article>
+  <% }) %>
+</div>
+<% } %>
+<section class="card mt"><div class="grid g3">
+  <div class="row nowrap"><span class="tile t-blue"><%- icon('stethoscope', 22) %></span><div><b>1. Describe your problem</b><div class="muted">Bangla or English, AI finds the specialty</div></div></div>
+  <div class="row nowrap"><span class="tile t-orange"><%- icon('calendar', 22) %></span><div><b>2. Pick a free slot</b><div class="muted">See the fee and click an available time</div></div></div>
+  <div class="row nowrap"><span class="tile t-teal"><%- icon('bell', 22) %></span><div><b>3. Doctor approves</b><div class="muted">You get a notification when it is confirmed</div></div></div>
+</div></section>
+<p class="muted small mt-s">AI is decision support only. It does not replace a qualified doctor.</p>
+<%- include('../partials/bottom') %>

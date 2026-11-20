@@ -1,0 +1,85 @@
+<%- include('../partials/auth-top', { wide: true }) %>
+<% const F = (k) => form[k] || ''; const provider = role !== 'patient'; %>
+<div class="auth-card wide">
+  <span class="steps-mini"><span class="ok"><a href="/register" style="color:inherit">1 Account type</a></span><span class="on">2 <%= R.title %> details</span><span>3 Verify <%= R.channel === 'sms' ? 'phone' : 'email' %></span><% if (provider) { %><span>4 Admin review</span><% } %></span>
+  <div class="row nowrap" style="gap:14px;margin-bottom:6px">
+    <span class="tile xl <%= { patient: 't-blue', doctor: 't-teal', center: 't-orange', pharmacy: 't-purple', ambulance: 't-red' }[role] %>"><%- icon({ patient: 'user', doctor: 'stethoscope', center: 'flask', pharmacy: 'pill', ambulance: 'ambulance' }[role], 28) %></span>
+    <div><h1 style="margin:0">Register as <%= R.title %></h1><p class="sub" style="margin:2px 0 0"><a href="/register">Change account type</a></p></div>
+  </div>
+  <p class="sub"><%= R.channel === 'sms' ? 'We will send a one-time code to your phone number by SMS.' : 'We will send a one-time code to your email address.' %> You verify only once; after that you log in with email and password.</p>
+  <form method="post" action="/register/<%= role %>?_csrf=<%= csrf %>" enctype="multipart/form-data">
+    <% if (['center', 'pharmacy', 'ambulance'].includes(role)) { %>
+      <div class="fgrid">
+        <label class="f"><%= { center: 'Diagnostic center name', pharmacy: 'Medical shop name', ambulance: 'Ambulance service name' }[role] %><input name="org_name" value="<%= F('org_name') %>" required></label>
+        <label class="f"><%= role === 'ambulance' ? 'Owner name' : 'Owner / contact person' %><input name="full_name" value="<%= F('full_name') %>" required></label>
+      </div>
+    <% } else { %>
+      <label class="f">Full name<input name="full_name" value="<%= F('full_name') %>" required autocomplete="name" placeholder="<%= role === 'doctor' ? 'Dr. Your Name' : 'Your name' %>"></label>
+    <% } %>
+    <div class="fgrid">
+      <label class="f">Email address<input type="email" name="email" value="<%= F('email') %>" required autocomplete="email"></label>
+      <label class="f">Phone number<%= R.channel === 'sms' ? ' (code is sent here)' : '' %><input name="phone" value="<%= F('phone') %>" required placeholder="01XXXXXXXXX" autocomplete="tel"></label>
+    </div>
+
+    <% if (role === 'patient') { %>
+      <div class="fgrid">
+        <label class="f">Date of birth<input type="date" name="date_of_birth" value="<%= F('date_of_birth') %>" required></label>
+        <label class="f">Gender<select name="gender"><option value="">Choose…</option><% for (const g of ['Male', 'Female', 'Other']) { %><option <%= F('gender') === g ? 'selected' : '' %>><%= g %></option><% } %></select></label>
+        <label class="f">Blood group<select name="blood_group"><option value="">Not sure</option><% for (const g of ['A+','A-','B+','B-','AB+','AB-','O+','O-']) { %><option <%= F('blood_group') === g ? 'selected' : '' %>><%= g %></option><% } %></select></label>
+        <label class="f">Address or area<input name="address" value="<%= F('address') %>" placeholder="House, road, area"></label>
+      </div>
+    <% } %>
+
+    <% if (role === 'doctor') { %>
+      <div class="fgrid">
+        <label class="f">Specialty<select name="specialty" required><option value="">Choose…</option><% for (const s of specialties) { %><option <%= F('specialty') === s ? 'selected' : '' %>><%= s %></option><% } %></select></label>
+        <label class="f">BMDC registration no.<input name="license_no" value="<%= F('license_no') %>" required placeholder="A-12345"></label>
+        <label class="f">Qualifications<input name="qualifications" value="<%= F('qualifications') %>" placeholder="MBBS, FCPS"></label>
+        <label class="f">Years of experience<input type="number" min="0" name="experience_years" value="<%= F('experience_years') %>"></label>
+        <label class="f">Consultation fee (BDT)<input type="number" min="0" name="fee" value="<%= F('fee') %>" placeholder="800"></label>
+        <label class="f">Chamber address<input name="org_address" value="<%= F('org_address') %>" placeholder="Hospital / chamber, area"></label>
+      </div>
+    <% } %>
+
+    <% if (['center', 'pharmacy'].includes(role)) { %>
+      <div class="fgrid">
+        <label class="f"><%= role === 'center' ? 'Trade license no.' : 'Drug license no.' %><input name="license_no" value="<%= F('license_no') %>" required></label>
+        <label class="f">Address<input name="org_address" value="<%= F('org_address') %>" required placeholder="Road, area, city"></label>
+      </div>
+    <% } %>
+
+    <% if (role === 'ambulance') { %>
+      <div class="fgrid">
+        <label class="f">Vehicle number<input name="vehicle_no" value="<%= F('vehicle_no') %>" required placeholder="Dhaka Metro-Cha 11-2233"></label>
+        <label class="f">Vehicle registration no.<input name="license_no" value="<%= F('license_no') %>" required></label>
+        <label class="f">Ambulance type<select name="kind"><% for (const k of AMBULANCE_KINDS) { %><option <%= F('kind') === k ? 'selected' : '' %>><%= k %></option><% } %></select></label>
+        <label class="f">Base area<input name="org_address" value="<%= F('org_address') %>" required placeholder="e.g. Dhanmondi, Dhaka"></label>
+        <label class="f">Driver name<input name="driver_name" value="<%= F('driver_name') %>"></label>
+        <label class="f">Driver phone<input name="driver_phone" value="<%= F('driver_phone') %>" placeholder="01XXXXXXXXX"></label>
+        <label class="f">Base fare (BDT)<input type="number" min="0" name="base_fare" value="<%= F('base_fare') || 800 %>"></label>
+        <label class="f">Per km (BDT)<input type="number" min="0" name="per_km" value="<%= F('per_km') || 60 %>"></label>
+      </div>
+    <% } %>
+
+    <div class="row" style="margin:-4px 0 14px"><input type="hidden" name="lat" value="<%= F('lat') %>"><input type="hidden" name="lng" value="<%= F('lng') %>">
+      <button type="button" class="btn ghost sm" data-geolocate><%- icon('pin', 16) %> Use my current location</button><span class="muted small">Helps show <%= role === 'patient' ? 'the nearest doctors, centers and pharmacies' : 'you to nearby patients' %>.</span></div>
+
+    <div class="fgrid">
+      <label class="f">Password<input type="password" name="password" required minlength="8" autocomplete="new-password"><small>8+ characters with a letter and a number</small></label>
+      <label class="f">Confirm password<input type="password" name="confirm_password" required minlength="8" autocomplete="new-password"></label>
+    </div>
+
+    <% if (provider) { %>
+      <h3 style="margin:6px 0 10px">Documents for verification</h3>
+      <div class="grid g3" style="gap:12px;margin-bottom:16px">
+        <% for (const [n, t, req] of [['license', { doctor: 'BMDC certificate', center: 'Trade license', pharmacy: 'Drug license', ambulance: 'Vehicle registration' }[role], true], ['degree', role === 'doctor' ? 'Degree certificate' : 'Other document', false], ['nid', 'National ID', false]]) { %>
+          <label class="drop small"><%- icon('upload', 22) %><b><%= t %><%= req ? ' *' : '' %></b><span data-fname>PDF or image, up to 10 MB</span><input type="file" name="<%= n %>" accept=".pdf,image/*" <%= req ? 'required' : '' %>></label>
+        <% } %>
+      </div>
+    <% } %>
+    <label class="check" style="margin-bottom:18px"><input type="checkbox" name="accept_terms" value="1" <%= form.accept_terms ? 'checked' : '' %>> I agree to the Terms and Privacy Policy.</label>
+    <button class="btn block lg">Create account and send code</button>
+  </form>
+  <p class="muted" style="text-align:center;margin-top:16px">Already registered? <a href="/login" style="text-decoration:underline;font-weight:600">Log in</a></p>
+</div>
+<%- include('../partials/auth-bottom') %>

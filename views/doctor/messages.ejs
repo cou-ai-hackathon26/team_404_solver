@@ -1,0 +1,11 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Messages</h1><p>Conversations are kept with each appointment.</p></div></div>
+<div class="grid g-main-r">
+  <section class="card"><% if (!threads.length) { %><div class="empty small">No messages yet.</div><% } %>
+    <% for (const t of threads) { %><a class="item <%= sel && sel.id === t.id ? 'sel' : '' %>" href="?id=<%= t.id %>"><%- avatar(t.patient_name, 'sm', t.patient_id) %><div class="grow"><b><%= t.patient_name %></b><div class="meta"><%= String(t.last || '').slice(0, 40) %></div></div><span class="muted small"><%= ago(t.at) %></span></a><% } %></section>
+  <section class="card"><% if (sel) { %><div class="card-h"><h2><%= sel.patient_name %></h2><a class="btn ghost sm" href="/doctor/appointments/<%= sel.id %>">Open consultation</a></div>
+    <div class="chat"><% for (const m of messages) { %><div class="msg <%= m.sender_id === user.id ? 'user' : 'assistant' %>" style="<%= m.kind === 'event' ? 'opacity:.7;font-style:italic' : '' %>"><%= m.body %><div class="small" style="opacity:.7;margin-top:4px"><%= friendly(m.created_at) %></div></div><% } %></div>
+    <form method="post" action="/doctor/appointments/<%= sel.id %>/message" class="row nowrap mt"><%- include('../partials/csrf') %><input name="body" required placeholder="Write a message" style="margin:0"><button class="btn">Send</button></form>
+  <% } else { %><div class="empty">Select a conversation.</div><% } %></section>
+</div>
+<%- include('../partials/bottom') %>

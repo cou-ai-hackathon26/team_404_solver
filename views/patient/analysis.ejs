@@ -1,0 +1,59 @@
+<%- include('../partials/top') %>
+<section class="hero compact med" style="background:linear-gradient(110deg,#0f766e 0%,#2563eb 55%,#7c3aed 100%)">
+  <div><span class="chip"><%- icon('sparkles', 14) %> AI health analysis</span><h1>Your health, month by month</h1><p>Upload lab reports and health documents. We read the values, compare them with normal ranges, show month-by-month bar charts and predict next month.</p></div>
+  <div class="score-ring" style="--p:<%= a.latestScore ?? 0 %>"><b><%= a.latestScore ?? '—' %></b><small>Health score</small><% if (a.predictedScore != null) { %><span>Next month: <%= a.predictedScore %></span><% } %></div>
+</section>
+
+<div class="grid g-main mt">
+  <section class="card"><div class="card-h"><h2>Overall health score</h2><div class="row"><%- pill('Last ' + months + ' months') %><span class="legend"><span><i style="background:#6366f1"></i>Actual</span><span><i style="background:#ddd6fe;border:1px dashed #7c3aed"></i>Predicted</span></span></div></div>
+    <% if (a.score.some((x) => x != null)) { %><%- monthBars(a.score, a.labels, { predicted: a.predictedScore, nextLabel: a.nextLabel, low: 80, high: 100, unit: '/100', label: 'Monthly health score' }) %>
+      <p class="muted small mt-s">Score 100 means every value you recorded that month was in the normal range. * Prediction from your trend, not a diagnosis.</p>
+    <% } else { %><div class="empty">Upload your first report to see your score.</div><% } %></section>
+  <section class="card soft"><form method="post" action="/patient/analysis/upload?_csrf=<%= csrf %>" enctype="multipart/form-data"><h2>Upload a document</h2>
+    <label class="drop mt-s"><%- icon('upload', 28) %><b>Lab report, prescription or check-up sheet</b><span data-fname>PDF or photo, up to 10 MB</span><input type="file" name="file" accept=".pdf,image/*"></label>
+    <div class="fgrid mt-s"><label class="f">Title<input name="title" placeholder="e.g. Lipid profile – Popular"></label><label class="f">Date of the report<input type="date" name="doc_date" value="<%= todayInput() %>" max="<%= todayInput() %>"></label></div>
+    <details><summary class="small muted">No file? Paste or type the values</summary><textarea name="text" class="mt-s" placeholder="Hemoglobin 13.2&#10;Fasting blood sugar 6.4 mmol/L&#10;BP 135/88"></textarea></details>
+    <button class="btn block mt-s"><%- icon('sparkles', 17) %> Analyze document</button>
+    </form>
+    <% if (importable) { %><form method="post" action="/patient/analysis/import-reports" class="mt-s"><%- include('../partials/csrf') %><button class="btn ghost block"><%- icon('download', 16) %> Import <%= importable %> lab report<%= importable === 1 ? '' : 's' %> from diagnostic centers</button></form><% } %>
+  </section>
+</div>
+
+<% if (doc) { %>
+<form class="card mt highlight" id="review" method="post" action="/patient/analysis/doc/<%= doc.id %>/values"><%- include('../partials/csrf') %>
+  <div class="card-h"><h2>Check the values from “<%= doc.title %>”</h2><label class="f" style="margin:0">Date<input type="date" name="doc_date" value="<%= doc.doc_date %>" style="margin:0"></label></div>
+  <p class="muted small">Values we found are filled in. Correct anything that is wrong, add missing values, then save.</p>
+  <div class="fgrid four mt-s"><% for (const [k, m] of Object.entries(MARKERS)) { %><label class="f <%= docValues[k] != null ? 'found' : '' %>"><%= m.name %> <small>(<%= m.unit %>)</small><input name="<%= k %>" inputmode="decimal" value="<%= docValues[k] ?? '' %>" placeholder="<%= m.low != null ? m.low + '–' + m.high : '' %>"></label><% } %></div>
+  <div class="row"><button class="btn">Save values</button><a class="btn ghost" href="/patient/analysis">Done</a><% if (doc.file_path) { %><a href="/files/health-doc/<%= doc.id %>" target="_blank">Open document</a><% } %></div>
+</form>
+<% } %>
+
+<% if (a.markers.length) { %>
+<div class="row between mt"><h2>Values by month</h2><span class="muted">Red bars are outside the normal range · dashed bar is next month’s prediction</span></div>
+<div class="grid g-main-r mt-s">
+  <section class="card"><% for (const m of a.markers) { %>
+    <a class="item marker <%= sel && sel.key === m.key ? 'sel' : '' %>" href="?m=<%= m.key %>#chart">
+      <span class="status-dot <%= m.status %>"></span><div class="grow"><b><%= m.name %></b><div class="meta"><%= m.latest %> <%= m.unit %><%= m.low != null ? ' · normal ' + m.low + '–' + m.high : '' %></div></div>
+      <span class="trend <%= m.trend %>"><%= { better: '▲ better', worse: '▼ worse', same: '● same', new: '● new' }[m.trend] %></span></a><% } %></section>
+  <section class="card" id="chart"><% if (sel) { %>
+    <div class="card-h"><div><h2><%= sel.name %></h2><span class="muted small">Unit: <%= sel.unit %><%= sel.low != null ? ' · normal range ' + sel.low + '–' + sel.high : '' %></span></div><%- badge(sel.status) %></div>
+    <%- monthBars(sel.values, a.labels, { predicted: sel.predicted, nextLabel: a.nextLabel, low: sel.low, high: sel.high, unit: sel.unit, label: sel.name }) %>
+    <div class="grid g3 mt-s" style="gap:10px">
+      <div class="item" style="margin:0"><div><span class="muted small">This month / latest</span><div><b><%= sel.latest %> <%= sel.unit %></b></div></div></div>
+      <div class="item" style="margin:0"><div><span class="muted small">Previous</span><div><b><%= sel.prev ?? '—' %> <%= sel.prev != null ? sel.unit : '' %></b></div></div></div>
+      <div class="item" style="margin:0;background:#f5f3ff"><div><span class="muted small">Predicted <%= a.nextLabel %></span><div><b style="color:#7c3aed"><%= sel.predicted ?? '—' %> <%= sel.predicted != null ? sel.unit : '' %></b></div></div></div>
+    </div>
+    <div class="note <%= sel.predictedStatus === 'normal' ? 'green' : 'blue' %> mt-s"><%- icon('activity', 18) %>
+      <span><%= sel.predictedStatus === 'normal' ? 'If the current trend continues, ' + sel.name.toLowerCase() + ' should stay in the normal range next month.' : 'If the current trend continues, ' + sel.name.toLowerCase() + ' may be outside the normal range next month. Discuss it with your doctor.' %></span></div>
+  <% } %></section>
+</div>
+<% } %>
+
+<section class="card mt"><h2 style="margin-bottom:12px">Your documents (<%= docs.length %>)</h2>
+  <% if (!docs.length) { %><div class="empty small">No documents yet.</div><% } %>
+  <% for (const d of docs) { %><div class="item"><span class="tile t-blue sm"><%- icon('file', 18) %></span><div class="grow"><b><%= d.title %></b><div class="meta"><%= fmtDate(d.doc_date) %> · <%= d.n %> value<%= d.n === 1 ? '' : 's' %><%= d.report_id ? ' · from diagnostic center' : '' %></div></div>
+    <a class="btn ghost sm" href="?doc=<%= d.id %>#review">Review values</a>
+    <form method="post" action="/patient/analysis/doc/<%= d.id %>/delete" data-confirm="Remove this document from the analysis?"><%- include('../partials/csrf') %><button class="btn danger sm"><%- icon('x', 14) %></button></form></div><% } %>
+</section>
+<p class="muted small mt-s">Health analysis is decision support. It does not diagnose. Always talk to your doctor about results outside the normal range.</p>
+<%- include('../partials/bottom') %>

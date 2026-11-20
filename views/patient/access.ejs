@@ -1,0 +1,28 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Access requests</h1><p>Doctors can see your reports only after you approve, and only for the time you allow.</p></div><%- pill(requests.filter(r => r.status === 'pending').length + ' pending', 'amber') %></div>
+<div class="grid g-main">
+  <section class="card"><h2 style="margin-bottom:14px">Requests</h2>
+    <% if (!requests.length) { %><div class="empty small">No doctor has asked for access.</div><% } %>
+    <% for (const r of requests) { %>
+      <div class="item"><%- avatar(r.doctor_name, 'md', r.doctor_id) %><div class="grow"><b><%= r.doctor_name %></b> <span class="muted small"><%= r.specialty %></span>
+        <div class="meta">Wants <%= r.report_id ? 'your ' + r.test_name + ' report' : 'all your diagnostic reports' %> for <%= r.duration_hours >= 48 ? Math.round(r.duration_hours / 24) + ' days' : r.duration_hours + ' hours' %> · <%= ago(r.created_at) %></div>
+        <% if (r.reason) { %><div class="meta">“<%= r.reason %>”</div><% } %></div>
+        <% if (r.status === 'pending') { %>
+          <form method="post" action="/patient/access/<%= r.id %>/approve"><%- include('../partials/csrf') %><button class="btn sm">Approve</button></form>
+          <form method="post" action="/patient/access/<%= r.id %>/reject"><%- include('../partials/csrf') %><button class="btn ghost sm">Reject</button></form>
+        <% } else { %><%- badge(r.status) %><% } %></div>
+    <% } %>
+  </section>
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:14px">Who can see your reports now</h2>
+      <% if (!grants.length) { %><div class="empty small">Nobody right now.</div><% } %>
+      <% for (const g of grants) { %><div class="item"><div class="grow"><b><%= g.doctor_name %></b><div class="meta"><%= g.report_id ? g.test_name : 'All reports' %> · until <%= fmtDateTime(g.expires_at) %></div></div>
+        <form method="post" action="/patient/grants/<%= g.id %>/revoke" data-confirm="Revoke this doctor's access now?"><%- include('../partials/csrf') %><button class="btn danger sm">Revoke</button></form></div><% } %>
+    </section>
+    <section class="card"><h2 style="margin-bottom:14px">Audit log</h2>
+      <div class="timeline"><% for (const l of log) { %><div class="tl"><span class="dot <%= l.color %>"></span><b style="font-size:14.5px"><%= l.text %></b><span class="small"><%= fmtDateTime(l.created_at) %></span></div><% } %></div>
+      <% if (!log.length) { %><div class="empty small">Nothing yet.</div><% } %>
+    </section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

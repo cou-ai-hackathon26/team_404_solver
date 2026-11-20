@@ -1,0 +1,68 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Track order <%= code(order.id) %></h1><p><%= order.pharmacy %> · <%= items.length %> medicine<%= items.length === 1 ? '' : 's' %></p></div><div class="row"><% if (order.order_type === 'emergency') { %><span class="badge red"><span class="pulse-dot"></span> Emergency delivery</span><% } %><%- badge(order.status) %></div></div>
+<div class="grid g-main">
+  <div class="stack">
+    <section class="card" style="padding:16px">
+      <div class="map">
+        <% const sx = 380, sy = 50, ex = 545, ey = 255; const rx = sx + (ex - sx) * progress, ry = progress < .5 ? sy + (ey - sy) * progress * 2 : ey; %>
+        <svg viewBox="0 0 600 380" role="img" aria-label="Delivery map">
+          <rect width="600" height="380" fill="#eaf0fb"/>
+          <% for (const [x, y, w, h] of [[20,20,110,70],[150,20,150,70],[320,20,130,70],[470,20,110,70],[20,110,110,95],[150,110,150,95],[320,110,130,95],[470,110,110,95],[20,240,110,90],[150,240,150,90],[320,240,130,90],[470,240,110,90]]) { %><rect x="<%= x %>" y="<%= y %>" width="<%= w %>" height="<%= h %>" rx="10" fill="#dde6f7"/><% } %>
+          <path d="M0 330 C150 300 420 340 600 300 L600 380 L0 380 Z" fill="#bfdbfe" opacity=".7"/>
+          <path d="M0 40 L600 300" stroke="#fff" stroke-width="12" opacity=".9"/>
+          <path d="M<%= sx %> <%= sy %> V<%= ey %> H<%= ex %>" fill="none" stroke="#c7d2fe" stroke-width="5" stroke-dasharray="2 10" stroke-linecap="round"/>
+          <path d="M<%= sx %> <%= sy %> V<%= progress < .5 ? ry : ey %><%= progress >= .5 ? ' H' + rx : '' %>" fill="none" stroke="#4f46e5" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="<%= sx %>" cy="<%= sy %>" r="13" fill="#0f766e"/><text x="<%= sx %>" y="<%= sy + 4 %>" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">Rx</text>
+          <circle cx="<%= ex %>" cy="<%= ey %>" r="16" fill="#ef4444"/><text x="<%= ex %>" y="<%= ey + 4 %>" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">You</text>
+          <% if (order.status === 'out_for_delivery') { %><circle cx="<%= rx %>" cy="<%= ry %>" r="20" fill="#2563eb" opacity=".2"/><circle cx="<%= rx %>" cy="<%= ry %>" r="10" fill="#2563eb" stroke="#fff" stroke-width="3"/><% } %>
+        </svg>
+        <div class="eta"><span class="muted small"><%= order.status === 'delivered' ? 'Delivered' : 'Estimated arrival' %></span><b><%= order.status === 'delivered' ? 'Arrived' : eta ? `About ${eta} min` : 'After dispatch' %></b><span class="muted small"><%= order.status === 'delivered' ? shortDate(order.updated_at) : away + ' km away' %></span></div>
+      </div>
+    </section>
+    <% if (order.rider_name) { %>
+    <section class="card"><div class="row nowrap"><%- avatar(order.rider_name, 'lg', 'rider') %><div class="grow"><b style="font-size:17px;color:var(--ink)">Delivery partner: <%= order.rider_name %></b><div class="muted">Motorbike · <%= order.status === 'delivered' ? 'Delivered' : 'On the way to you' %></div></div>
+      <a class="btn ghost" href="tel:<%= (order.rider_phone || '').replace(/\s/g, '') %>"><%- icon('phone', 16) %>Call</a><a class="btn" href="tel:<%= (order.pharmacy_phone || '').replace(/\s/g, '') %>">Call pharmacy</a></div></section>
+    <% } %>
+    <section class="card"><h2 style="margin-bottom:14px">Medicines</h2>
+      <table class="tbl"><tr><th>Medicine</th><th class="num">Ordered</th><th class="num">Supplied</th><th class="num">Price</th></tr>
+        <% for (const i of items) { %><tr><td><b><%= i.name %> <%= i.strength %></b></td><td class="num"><%= i.quantity %></td><td class="num"><%= i.fulfilled_quantity ?? '—' %></td><td class="num"><%= money(i.unit_price * (i.fulfilled_quantity ?? i.quantity)) %></td></tr><% } %></table>
+      <% if (order.pharmacy_note) { %><div class="note blue mt-s"><%- icon('message', 18) %> Pharmacy: <%= order.pharmacy_note %></div><% } %>
+    </section>
+    <% if (order.status === 'delivered') { %>
+    <section class="card" id="review"><h2>Rate <%= order.pharmacy %></h2>
+      <% if (review) { %>
+        <div class="row mt-s"><%- stars(review.overall) %><b><%= review.overall.toFixed(1) %> of 5</b><span class="muted">· thank you for your review</span></div>
+        <% if (review.comment) { %><p class="mt-s">“<%= review.comment %>”</p><% } %>
+        <% if (review.reply) { %><div class="note blue mt-s"><%- icon('message', 18) %> <b>Pharmacy reply:</b>&nbsp;<%= review.reply %></div><% } %>
+      <% } else { %>
+        <p class="muted mt-s">Only patients with a delivered order can review, so ratings stay honest.</p>
+        <form method="post" action="/patient/orders/<%= order.id %>/review" class="mt"><%- include('../partials/csrf') %>
+          <div class="grid g2" style="gap:12px"><% for (const [k, t] of Object.entries(ASPECTS)) { %><div class="item" style="margin:0"><b class="grow"><%= t %></b><div class="rate"><% for (let n = 5; n >= 1; n--) { %><input type="radio" id="<%= k + n %>" name="<%= k %>" value="<%= n %>" required><label for="<%= k + n %>" title="<%= n %> star<%= n > 1 ? 's' : '' %>">★</label><% } %></div></div><% } %></div>
+          <label class="f mt">Your review (optional)<textarea name="comment" placeholder="What went well? What could be better?" style="min-height:80px"></textarea></label>
+          <button class="btn">Submit review</button></form>
+      <% } %>
+    </section>
+    <% } %>
+  </div>
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:14px">Order status</h2>
+      <% const FLOW = [['received','Order received'],['preparing','Preparing'],['ready','Ready for delivery'],['out_for_delivery','Out for delivery'],['delivered','Delivered']];
+         const seen = Object.fromEntries(history.map(h => [h.status, h])); const cur = FLOW.findIndex(f => f[0] === order.status); %>
+      <% if (['rejected','cancelled'].includes(order.status)) { %><div class="alert error"><%= label(order.status) %><%= order.pharmacy_note ? ': ' + order.pharmacy_note : '' %></div><% } %>
+      <div class="vsteps"><% FLOW.forEach(([s, t], i) => { const h = seen[s]; const done = h || (cur >= i && cur >= 0); %>
+        <div class="vs <%= done ? '' : 'todo' %>"><i><%- icon('pill', 18) %></i><div><b><%= t %></b><span class="muted small"><%= h ? fmtTime(h.created_at) + (h.note && s !== 'received' ? ' · ' + h.note : '') : s === 'delivered' && eta ? 'Estimated ' + fmtTime(new Date(Date.now() + eta * 60000)) : '' %></span></div></div><% }) %></div>
+      <p class="muted small mt-s">You also get a notification for every status change.</p>
+    </section>
+    <section class="card"><h2 style="margin-bottom:14px">Delivery details</h2>
+      <div class="item"><div><b><%= order.delivery_address %></b><div class="meta"><%= user.full_name %> · <%= user.phone %></div></div></div>
+      <div class="row between mt"><span class="muted">Payment</span><%- pill(order.payment_method === 'cod' ? 'Cash on delivery' : (order.payment_provider ? order.payment_provider : 'Online') + ' · ' + label(order.payment_status)) %></div>
+      <div class="row between mt-s"><span class="muted">Delivery fee</span><span><%= money(order.delivery_fee) %></span></div>
+      <div class="row between mt-s"><span class="muted"><%= order.payment_status === 'paid' ? 'Total paid' : 'Total to pay' %></span><b style="font-size:24px;color:var(--ink)"><%= money(order.total) %></b></div>
+      <% if (order.payment_method === 'online' && order.payment_status === 'unpaid' && order.accepted && !['rejected','cancelled'].includes(order.status)) { %>
+        <form method="post" action="/patient/orders/<%= order.id %>/pay" class="mt"><%- include('../partials/csrf') %><button class="btn block">Pay <%= money(order.total) %> online (demo)</button></form><% } %>
+      <% if (order.status === 'received' && !order.accepted) { %>
+        <form method="post" action="/patient/orders/<%= order.id %>/cancel" data-confirm="Cancel this order?" class="mt"><%- include('../partials/csrf') %><button class="btn danger block">Cancel order</button></form><% } %>
+    </section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

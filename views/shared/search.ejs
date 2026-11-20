@@ -1,0 +1,12 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Search</h1><p><%= q ? 'Results for “' + q + '”' : 'Type a doctor, specialty, medicine, test or report.' %></p></div></div>
+<div class="grid g2">
+  <% const block = (title, rows, render) => rows.length ? `<section class="card"><h2>${title}</h2><div class="mt-s">${rows.map(render).join('')}</div></section>` : ''; %>
+  <%- block('Doctors', out.doctors, (d) => `<a class="item" href="${user.role === 'patient' ? '/patient/doctors/' + d.id : '#'}">${avatar(d.full_name, 'sm', d.id)}<div class="grow"><b>${esc(d.full_name)}</b><div class="meta">${esc(d.specialty)} · ${money(d.fee)}</div></div></a>`) %>
+  <%- block('Medicines', out.medicines, (m) => `<div class="item"><span class="tile sm t-pink">${icon('pill', 18)}</span><div class="grow"><b>${esc(m.name)} ${esc(m.strength || '')}</b><div class="meta">${esc(m.brand || '')} · ${esc(m.form || '')}${m.rx_required ? ' · prescription required' : ''}</div></div></div>`) %>
+  <%- block('Tests', out.tests, (t) => `<div class="item"><span class="tile sm t-sky">${icon('flask', 18)}</span><div class="grow"><b>${esc(t.name)}</b><div class="meta">${esc(t.category || '')}</div></div></div>`) %>
+  <%- block('Your reports', out.reports, (r) => `<a class="item" href="/files/report/${r.id}" target="_blank"><span class="tile sm t-teal">${icon('file', 18)}</span><div class="grow"><b>${esc(r.name)}</b><div class="meta">${esc(r.center)} · ${fmtDate(r.test_date)}</div></div></a>`) %>
+  <%- block('Your patients', out.patients, (p) => `<a class="item" href="/doctor/patients?id=${p.id}">${avatar(p.full_name, 'sm', p.id)}<b>${esc(p.full_name)}</b></a>`) %>
+</div>
+<% if (q && !Object.values(out).some((r) => r.length)) { %><div class="empty">No results. Try another word.</div><% } %>
+<%- include('../partials/bottom') %>

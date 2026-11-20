@@ -1,0 +1,38 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Medical records</h1><p>Your complete history of tests and reports. Share only what you choose.</p></div><%- pill(reports.length + ' reports') %></div>
+<div class="grid g3"><% for (const s of cards) { %><%- include('../partials/stat', { s }) %><% } %></div>
+<form method="post" action="/patient/records/share" class="grid g-main mt" id="share"><%- include('../partials/csrf') %>
+  <section class="card">
+    <div class="card-h"><h2>All reports</h2><div class="filter"><a href="?" class="<%= !cat ? 'on' : '' %>">All</a><a href="?cat=Blood" class="<%= cat === 'Blood' ? 'on' : '' %>">Blood</a><a href="?cat=Imaging" class="<%= cat === 'Imaging' ? 'on' : '' %>">Imaging</a><a href="?cat=Cardiology" class="<%= cat === 'Cardiology' ? 'on' : '' %>">Cardiology</a></div></div>
+    <% if (!reports.length && !pendingTests.length) { %><div class="empty small">No reports yet.</div><% } %>
+    <% for (const r of reports) { %>
+      <label class="item" style="cursor:pointer"><input type="checkbox" name="report_ids" value="<%= r.id %>" style="width:20px;height:20px">
+        <div class="grow"><b style="font-size:16px"><%= r.test_name %></b><div class="meta"><%= r.center_name %><%= r.doctor_name ? ' · Requested by ' + r.doctor_name : '' %> · <%= shortDate(r.test_date) %></div><% if (r.summary) { %><div class="meta"><%= r.summary %></div><% } %></div>
+        <a class="btn ghost sm" href="/files/report/<%= r.id %>" target="_blank" title="View"><%- icon('eye', 16) %></a><a class="btn ghost sm" href="/files/report/<%= r.id %>?download=1" title="Download"><%- icon('download', 16) %></a><%- pill('Ready', 'green') %></label>
+    <% } %>
+    <% for (const t of pendingTests) { %>
+      <div class="item" style="opacity:.85"><input type="checkbox" disabled style="width:20px;height:20px"><div class="grow"><b style="font-size:16px"><%= t.test_name %></b><div class="meta"><%= t.center_name || 'No center booked' %><%= t.doctor_name ? ' · Requested by ' + t.doctor_name : '' %> · Pending</div></div><%- pill('Pending', 'amber') %></div>
+    <% } %>
+  </section>
+  <div class="stack">
+    <section class="card soft">
+      <h2>Share selected reports</h2>
+      <p class="muted mt-s" data-share-label>Select reports on the left. Doctors never see your full history.</p>
+      <label class="f mt-s">Doctor<select name="doctor_id" required><% for (const d of doctors) { %><option value="<%= d.id %>"><%= d.full_name %> · <%= d.specialty %></option><% } %></select></label>
+      <label class="f">Access period<select name="days"><% for (const d of [1, 3, 7, 14, 30]) { %><option value="<%= d %>" <%= d === defaultDays ? 'selected' : '' %>><%= d %> day<%= d > 1 ? 's' : '' %></option><% } %></select></label>
+      <button class="btn block lg" data-share-count>Share reports</button>
+    </section>
+    <section class="card"><h2 style="margin-bottom:14px">Active access</h2>
+      <% if (!grants.length) { %><div class="empty small">No doctor can see your reports right now.</div><% } %>
+      <% for (const g of grants) { %>
+        <div class="item"><div class="grow"><b><%= g.doctor_name %></b><div class="meta"><%= g.report_id ? g.test_name : 'All reports' %> · <%= Math.max(1, Math.ceil((new Date(g.expires_at) - Date.now()) / 86400000)) %> days left</div></div>
+          <button class="btn danger sm" formaction="/patient/grants/<%= g.id %>/revoke" formnovalidate>Revoke</button></div>
+      <% } %>
+    </section>
+  </div>
+</form>
+<section class="card mt"><h2 style="margin-bottom:14px">Audit log</h2>
+  <% if (!log.length) { %><div class="empty small">Nothing yet.</div><% } %>
+  <div class="timeline"><% for (const l of log) { %><div class="tl"><span class="dot <%= l.color %>"></span><b style="font-size:15.5px"><%= l.text %></b><span class="small"><%= fmtDateTime(l.created_at) %></span></div><% } %></div>
+</section>
+<%- include('../partials/bottom') %>

@@ -1,0 +1,40 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Upload diagnostic report</h1><p>Upload the result for the selected test request.</p></div><% if (sel) { %><%- badge(sel.status) %><% } %></div>
+<% if (sel) { %>
+<form method="post" action="/center/upload/<%= sel.id %>?_csrf=<%= csrf %>" enctype="multipart/form-data" class="grid g-main">
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:14px">Report file</h2>
+      <label class="drop"><%- icon('file', 30) %><b data-fname>Drop report PDF here or browse</b><small>PDF or image, up to 10 MB</small><input type="file" name="file" accept="application/pdf,image/*" required></label></section>
+    <section class="card"><h2 style="margin-bottom:14px">Report details</h2>
+      <div class="fgrid"><label class="f">Report date<input type="date" name="test_date" value="<%= todayInput() %>" max="<%= todayInput() %>" required></label>
+        <label class="f">Technician<input name="technician" list="staff-list" value="<%= user.isCenterAdmin ? '' : user.full_name %>" placeholder="Name"></label></div>
+      <datalist id="staff-list"><% for (const s of staff) { %><option value="<%= s.full_name %>"><% } %></datalist>
+      <label class="f">Result summary (optional)<textarea name="summary" placeholder="e.g. Normal sinus rhythm. See attached report for details."></textarea></label></section>
+  </div>
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:14px">Test request</h2>
+      <div class="item"><div><b><%= sel.patient_name %> · <%= sel.test_name %></b><div class="meta"><%= sel.doctor_name ? 'Requested by ' + sel.doctor_name + ' · ' : '' %><%= shortDate(sel.created_at) %></div></div></div>
+      <p class="small mt" style="font-weight:700">Linked automatically</p>
+      <% for (const [k, v] of [['Patient', sel.patient_name], ['Test', sel.test_name], ['Diagnostic center', center.name], ['Doctor request', sel.doctor_name || 'Walk-in'], ['Test date', fmtDate(new Date())]]) { %>
+        <div class="item" style="padding:10px 14px"><span class="tile sm t-blue" style="width:22px;height:22px;border-radius:6px"><%- icon('check', 14) %></span><b class="grow"><%= k %></b><span class="muted"><%= v %></span></div><% } %>
+    <section class="card warm"><div class="row nowrap"><span class="tile t-orange"><%- icon('bell', 22) %></span><p>The patient gets a notification and can view or download the report from their medical record.</p></div>
+      <button class="btn block lg mt">Upload and notify patient</button>
+      <p class="muted small mt-s">You cannot open this patient's earlier reports without their permission.</p></section>
+  </div>
+</form>
+<% } else { %><div class="empty">No open requests to upload for. Use walk-in upload below.</div><% } %>
+<div class="grid g2 mt">
+  <section class="card"><h2 style="margin-bottom:14px">Other open requests</h2>
+    <% for (const o of pending.filter(p => !sel || p.id !== sel.id).slice(0, 8)) { %><a class="item" href="?id=<%= o.id %>"><div class="grow"><b><%= o.patient_name %> · <%= o.test_name %></b><div class="meta"><%= label(o.status) %></div></div><%- icon('upload', 18) %></a><% } %>
+    <% if (pending.length <= 1) { %><div class="empty small">No other requests.</div><% } %>
+    <details class="mt"><summary class="small" style="cursor:pointer;color:var(--blue);font-weight:600">Walk-in patient (no booking)</summary>
+      <form method="post" action="/center/walk-in?_csrf=<%= csrf %>" enctype="multipart/form-data" class="mt-s">
+        <div class="fgrid"><label class="f">Patient's registered email<input type="email" name="email" required></label>
+          <label class="f">Test<select name="test_id" required><% for (const t of tests) { %><option value="<%= t.id %>"><%= t.name %></option><% } %></select></label>
+          <label class="f">Report date<input type="date" name="test_date" value="<%= todayInput() %>"></label><label class="f">File<input type="file" name="file" required accept="application/pdf,image/*"></label></div>
+        <button class="btn sm">Upload</button></form></details></section>
+  <section class="card"><h2 style="margin-bottom:14px">Recently uploaded</h2>
+    <% for (const r of recent) { %><a class="item" href="/files/report/<%= r.id %>" target="_blank"><span class="tile sm t-teal"><%- icon('file', 18) %></span><div class="grow"><b><%= r.patient_name %> · <%= r.test_name %></b><div class="meta"><%= friendly(r.created_at) %></div></div><%- pill('Sent', 'green') %></a><% } %>
+    <% if (!recent.length) { %><div class="empty small">Nothing uploaded yet.</div><% } %></section>
+</div>
+<%- include('../partials/bottom') %>

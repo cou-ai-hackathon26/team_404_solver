@@ -1,0 +1,104 @@
+<%- include('../partials/top') %>
+<section class="hero med" style="background:linear-gradient(115deg,#be123c 0%,#7c3aed 60%,#2563eb 100%)">
+  <div><span class="chip"><%- icon('drop', 14) %> রক্ত দিন, জীবন বাঁচান</span><h1>Blood bank</h1><p>Search eligible donors by blood group and contact them directly, or post a request and compatible donors nearby are notified at once. Donors appear only when 4 months have passed since their last donation.</p>
+    <div class="actions"><a class="btn white" href="#search">Find donors</a><a class="btn glass" href="#donor"><%= donor ? 'My donor profile' : 'Become a donor' %></a></div></div>
+  <div class="hero-side"><small>Eligible donors right now</small><b><%= Object.values(counts).reduce((a, b) => a + b, 0) %></b><div><%= open %> open request<%= open === 1 ? '' : 's' %></div></div>
+  <%- include('../partials/stickers', { set: 'blood' }) %>
+</section>
+
+<section class="card mt" id="search"><div class="card-h"><h2><%- icon('search', 20) %> Search available donors</h2><span class="muted small">Only donors whose last donation was over 4 months ago</span></div>
+  <form method="get" action="/blood#search" class="fgrid four">
+    <label class="f">Blood group needed<select name="group" required><option value="">Choose…</option><% for (const g of GROUPS) { %><option <%= q.group === g ? 'selected' : '' %>><%= g %></option><% } %></select></label>
+    <label class="f">Hospital<input name="hospital" value="<%= q.hospital %>" placeholder="Where blood is needed"></label>
+    <label class="f">Patient name<input name="patient" value="<%= q.patient %>" placeholder="Optional"></label>
+    <div class="f" style="align-self:end"><button class="btn red block"><%- icon('search', 17) %> Search donors</button></div>
+  </form>
+  <% if (results) { %>
+    <p class="mt-s"><b><%= results.length %></b> eligible donor<%= results.length === 1 ? '' : 's' %> can give to <b><%= q.group %></b><%= q.hospital ? ' at ' + q.hospital : '' %>. Compatible groups: <%= COMPATIBLE[q.group].join(', ') %>.</p>
+    <% if (!results.length) { %><div class="empty small mt-s">No eligible donor found. Post a request below; we will notify donors as they become eligible.</div><% } %>
+    <div class="grid g3 mt-s">
+      <% results.slice(0, 30).forEach((d, i) => { %>
+        <div class="donor-card" style="--d:<%= i * 40 %>ms"><span class="blood-chip"><%= d.blood_group %></span>
+          <div class="grow"><b><%= d.full_name %></b><div class="meta"><%= d.area || 'Area not set' %><%= d.distance != null ? ' · ' + d.distance + ' km' : '' %></div>
+            <div class="meta"><%= d.since != null ? 'Last donated ' + Math.floor(d.since / 30) + ' months ago' : 'No donation recorded' %> · <%= d.donations %> donation<%= d.donations === 1 ? '' : 's' %></div>
+            <% if (d.phone) { %><a class="btn green sm mt-s" href="tel:<%= d.phone %>"><%- icon('phone', 15) %> <%= d.phone %></a><% } else { %><span class="muted small">Number hidden · post a request to notify</span><% } %></div></div>
+      <% }) %>
+    </div>
+  <% } %>
+</section>
+
+<% const pendingIn = incoming.filter(i => i.status === 'notified' && i.req_status === 'open'); if (pendingIn.length) { %>
+<section class="card mt" style="border:2px solid #fecaca"><h2 style="margin-bottom:14px">Someone needs your help</h2>
+  <% for (const i of pendingIn) { %>
+    <div class="item"><span class="tile t-red"><%- icon('drop', 22) %></span><div class="grow"><b><%= i.blood_group %> · <%= i.units %> unit<%= i.units > 1 ? 's' : '' %> at <%= i.hospital %></b>
+      <div class="meta"><%= i.patient_name %><%= i.distance != null ? ' · ' + i.distance.toFixed(1) + ' km away' : '' %><%= i.needed_by ? ' · needed by ' + shortDate(i.needed_by) : '' %> · <%= ago(i.asked_at) %></div></div>
+      <% if (i.urgency === 'urgent') { %><%- pill('Urgent', 'red') %><% } %>
+      <form method="post" action="/blood/responses/<%= i.id %>/accept"><%- include('../partials/csrf') %><button class="btn sm red">I can donate</button></form>
+      <form method="post" action="/blood/responses/<%= i.id %>/decline"><%- include('../partials/csrf') %><button class="btn ghost sm">Not now</button></form></div>
+  <% } %>
+</section>
+<% } %>
+
+<div class="grid g-main mt">
+  <section class="card" id="request"><h2>Post a blood request</h2><p class="muted small">Compatible, eligible donors nearby get a notification and can accept.</p>
+    <form method="post" action="/blood/requests" class="mt"><%- include('../partials/csrf') %>
+      <div class="fgrid">
+        <label class="f">Patient name<input name="patient_name" value="<%= q.patient %>" required></label>
+        <label class="f">Blood group needed<select name="blood_group" required><option value="">Choose…</option><% for (const g of GROUPS) { %><option <%= q.group === g ? 'selected' : '' %>><%= g %></option><% } %></select></label>
+        <label class="f">Units (bags)<input type="number" name="units" min="1" max="10" value="1" required></label>
+        <label class="f">Needed by<input type="date" name="needed_by" min="<%= todayInput() %>"></label>
+        <label class="f full">Hospital<input name="hospital" value="<%= q.hospital %>" required placeholder="e.g. Dhaka Medical College Hospital"></label>
+        <label class="f">Contact phone<input name="contact_phone" value="<%= user.phone || '' %>" required></label>
+        <label class="f">Urgency<select name="urgency"><option value="normal">Within a few days</option><option value="urgent">Urgent (today)</option></select></label>
+        <label class="f full">Note (optional)<input name="note" placeholder="e.g. Surgery tomorrow morning"></label>
+      </div>
+      <div class="row"><span class="muted small">Hospital location (for distance):</span><input name="lat" placeholder="Latitude" style="max-width:140px;margin:0"><input name="lng" placeholder="Longitude" style="max-width:140px;margin:0"><button type="button" class="btn ghost sm" data-geolocate>Use my location</button></div>
+      <button class="btn red lg mt"><%- icon('drop', 18) %>Find donors now</button>
+    </form>
+  </section>
+  <div class="stack">
+    <section class="card soft" id="donor"><h2>My donor profile</h2>
+      <% if (donor) { %><div class="row mt-s"><%- pill('Group ' + donor.blood_group, 'red') %><%- donor.available ? pill('Available', 'green') : pill('Paused', 'gray') %><%- pill(donor.donations + ' donations', 'purple') %></div>
+        <% if (nextEligible) { %><p class="muted small mt-s">You can donate again from <b><%= fmtDate(nextEligible) %></b>. We will not ask before then.</p><% } %><% } %>
+      <form method="post" action="/blood/donor" class="mt-s"><%- include('../partials/csrf') %>
+        <div class="fgrid">
+          <label class="f">Blood group<select name="blood_group" required><% for (const g of GROUPS) { %><option <%= (donor ? donor.blood_group : profile.blood_group) === g ? 'selected' : '' %>><%= g %></option><% } %></select></label>
+          <label class="f">Last donation<input type="date" name="last_donation" value="<%= donor && donor.last_donation ? donor.last_donation.slice(0, 10) : '' %>" max="<%= todayInput() %>"></label>
+          <label class="f">Area<input name="area" value="<%= donor ? donor.area || '' : '' %>" placeholder="e.g. Dhanmondi"></label>
+          <label class="f">Phone for donors list<input name="phone" value="<%= donor ? donor.phone || user.phone || '' : user.phone || '' %>"></label>
+        </div>
+        <input type="hidden" name="lat" value="<%= donor ? donor.lat ?? '' : profile.lat ?? '' %>"><input type="hidden" name="lng" value="<%= donor ? donor.lng ?? '' : profile.lng ?? '' %>">
+        <div class="toggle-row"><div><b>Available to donate</b><small>Turn off when you are ill or travelling</small></div><label class="switch"><input type="checkbox" name="available" value="1" <%= !donor || donor.available ? 'checked' : '' %>><span></span></label></div>
+        <div class="toggle-row"><div><b>Show my phone in search</b><small>People who need blood can call you directly</small></div><label class="switch"><input type="checkbox" name="show_phone" value="1" <%= !donor || donor.show_phone ? 'checked' : '' %>><span></span></label></div>
+        <button class="btn block mt-s"><%= donor ? 'Save' : 'Register as donor' %></button></form>
+      <p class="muted small mt-s">Whole blood can be donated every 4 months (<%= gap %> days). After you donate, you are hidden from searches until then.</p>
+      <% if (donor) { %><form method="post" action="/blood/donated" class="donate-today mt-s"><%- include('../partials/csrf') %><b><%- icon('drop', 16) %> I donated blood</b>
+        <div class="row nowrap mt-s"><input type="date" name="donated_on" value="<%= todayInput() %>" max="<%= todayInput() %>" style="margin:0"><input name="place" placeholder="Where (optional)" style="margin:0"><button class="btn red sm">Save</button></div></form>
+        <% if (donations.length) { %><div class="mt-s small"><b>My donations</b><% for (const d of donations) { %><div class="toggle-row" style="padding:6px 0"><span><%= fmtDate(d.donated_on) %></span><span class="muted"><%= d.place || '' %></span></div><% } %></div><% } %>
+      <% } %></section>
+    <section class="card"><h2 style="margin-bottom:10px">Donors by group</h2>
+      <div class="grid g4" style="gap:8px"><% for (const g of GROUPS) { %><div class="item" style="margin:0;display:block;text-align:center;padding:10px"><b style="color:#be123c;font-size:18px"><%= g %></b><div class="meta"><%= counts[g] || 0 %></div></div><% } %></div>
+      <p class="muted small mt-s">O− can give to everyone; AB+ can receive from everyone.</p></section>
+  </div>
+</div>
+
+<section class="card mt" id="mine"><h2 style="margin-bottom:14px">My requests</h2>
+  <% if (!mine.length) { %><div class="empty small">You have not requested blood.</div><% } %>
+  <% for (const r of mine) { const acc = r.responses.filter(s => ['accepted','donated'].includes(s.status)); %>
+    <div class="item" style="display:block">
+      <div class="row between"><div><b><%= r.blood_group %> · <%= r.units %> unit<%= r.units > 1 ? 's' : '' %> for <%= r.patient_name %></b><div class="meta"><%= r.hospital %> · posted <%= ago(r.created_at) %> · <%= r.responses.length %> donors notified · <%= acc.length %> accepted</div></div>
+        <div class="row"><%- badge(r.status) %><% if (r.status === 'open') { %>
+          <form method="post" action="/blood/requests/<%= r.id %>/rematch"><%- include('../partials/csrf') %><button class="btn ghost sm">Notify more</button></form>
+          <form method="post" action="/blood/requests/<%= r.id %>/fulfilled"><%- include('../partials/csrf') %><button class="btn sm green">Fulfilled</button></form>
+          <form method="post" action="/blood/requests/<%= r.id %>/cancel" data-confirm="Cancel this request?"><%- include('../partials/csrf') %><button class="btn danger sm">Cancel</button></form><% } %></div></div>
+      <% for (const s of acc) { %><div class="row mt-s"><%- avatar(s.full_name, 'sm', s.donor_id) %><b><%= s.full_name %></b><%- pill(s.blood_group, 'red') %><a href="tel:<%= s.phone %>"><%- icon('phone', 16) %> <%= s.phone %></a><%- badge(s.status) %>
+        <% if (s.status === 'accepted') { %><form method="post" action="/blood/responses/<%= s.id %>/donated"><%- include('../partials/csrf') %><button class="btn ghost sm">Mark donated</button></form><% } %></div><% } %>
+    </div>
+  <% } %>
+</section>
+<% const past = incoming.filter(i => !(i.status === 'notified' && i.req_status === 'open')); if (past.length) { %>
+<section class="card mt"><h2 style="margin-bottom:14px">Requests you were asked about</h2>
+  <% for (const i of past) { %><div class="item"><div class="grow"><b><%= i.blood_group %> at <%= i.hospital %></b><div class="meta"><%= ago(i.asked_at) %><%= i.status === 'accepted' ? ' · contact: ' + i.contact_phone : '' %></div></div><%- badge(i.status) %></div><% } %>
+</section>
+<% } %>
+<%- include('../partials/bottom') %>

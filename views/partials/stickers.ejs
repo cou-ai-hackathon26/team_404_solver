@@ -1,0 +1,12 @@
+<%# Floating medical stickers and a heartbeat line for hero banners. set: doctor | emergency | blood | pharmacy | patient %>
+<% const SETS = {
+  doctor: [['stethoscope', '#0d9488'], ['heart', '#e11d48'], ['pill', '#7c3aed'], ['syringe', '#2563eb'], ['dna', '#0891b2']],
+  emergency: [['ambulance', '#dc2626'], ['heart', '#e11d48'], ['plus', '#dc2626'], ['activity', '#ea580c'], ['phone', '#16a34a']],
+  blood: [['drop', '#dc2626'], ['heart', '#e11d48'], ['syringe', '#be123c'], ['plus', '#dc2626'], ['activity', '#9f1239']],
+  pharmacy: [['pill', '#7c3aed'], ['cart', '#2563eb'], ['plus', '#16a34a'], ['thermo', '#ea580c'], ['heart', '#e11d48']],
+  patient: [['stethoscope', '#0d9488'], ['pill', '#7c3aed'], ['heart', '#e11d48'], ['thermo', '#ea580c'], ['activity', '#2563eb']],
+}; const list = SETS[typeof set !== 'undefined' ? set : 'patient'] || SETS.patient; %>
+<div class="stickers" aria-hidden="true">
+  <% list.forEach(([ic, color], i) => { %><span class="sticker s<%= i + 1 %>" style="--c:<%= color %>"><%- icon(ic, i === 0 ? 34 : 24) %></span><% }) %>
+  <svg class="ecg" viewBox="0 0 600 60" preserveAspectRatio="none"><path d="M0 30 H150 L165 30 L175 10 L188 52 L200 4 L212 44 L222 30 H360 L372 30 L382 14 L394 48 L404 22 L414 30 H600"/></svg>
+</div>

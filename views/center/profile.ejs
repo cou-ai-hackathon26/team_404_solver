@@ -1,0 +1,15 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Center profile</h1><p>Patients see these details when they choose a center.</p></div><a class="btn ghost" href="/account">Password and devices</a></div>
+<form method="post" action="/center/profile" class="card"><%- include('../partials/csrf') %>
+  <% const ro = user.isCenterAdmin ? '' : 'disabled'; %>
+  <div class="fgrid">
+    <label class="f">Center name<input name="name" value="<%= center.name %>" required <%= ro %>></label><label class="f">Trade license<input value="<%= center.license_no || '' %>" disabled></label>
+    <label class="f">Address<input name="address" value="<%= center.address || '' %>" <%= ro %>></label><label class="f">Phone<input name="phone" value="<%= center.phone || '' %>" <%= ro %>></label>
+    <label class="f">Email<input name="email" value="<%= center.email || '' %>" <%= ro %>></label><label class="f">Opening hours<input name="opening_hours" value="<%= center.opening_hours || '' %>" <%= ro %>></label>
+    <label class="f full">Other services<input name="services" value="<%= center.services || '' %>" <%= ro %>></label>
+    <label class="f">Latitude<input name="lat" value="<%= center.lat ?? '' %>" <%= ro %>></label><label class="f">Longitude<input name="lng" value="<%= center.lng ?? '' %>" <%= ro %>></label>
+  </div>
+  <div class="toggle-row"><div><b>Accept online booking requests</b></div><label class="switch"><input type="checkbox" name="online_booking" value="1" <%= center.online_booking ? 'checked' : '' %> <%= ro %>><span></span></label></div>
+  <% if (user.isCenterAdmin) { %><div class="row mt-s"><button class="btn">Save</button><button type="button" class="btn ghost" data-geolocate>Use my location</button></div><% } %>
+</form>
+<%- include('../partials/bottom') %>

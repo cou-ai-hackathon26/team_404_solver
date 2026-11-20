@@ -1,0 +1,59 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Appointment requests</h1><p>Approve a booked slot in one click, delete it, or propose another time.</p></div><div class="row"><%- pill(counts.pending + ' pending', 'amber') %><%- pill(counts.proposed + ' proposed', 'green') %></div></div>
+<% if (!sel) { %><div class="empty">No open requests. New requests appear here.</div><% } else { %>
+<div class="grid g-main-r">
+  <section class="card"><h2 style="margin-bottom:14px">Pending requests</h2>
+    <% for (const p of pending) { %><a class="item <%= p.id === sel.id ? 'sel' : '' %>" href="?id=<%= p.id %>"><%- avatar(p.patient_name, 'md', p.patient_id) %><div class="grow"><b><%= p.patient_name %></b><div class="meta"><%= (p.reason || '').slice(0, 34) %></div></div>
+      <%- p.status === 'proposed' ? pill('Proposed', 'green') : p.status === 'reschedule_requested' ? pill('Reschedule') : p.preferred_time && /^\d{4}-\d{2}-\d{2}T/.test(p.preferred_time) ? pill('Slot booked', 'purple') : pill('New', 'amber') %></a><% } %>
+  </section>
+  <section class="card">
+    <div class="row between nowrap"><div class="row nowrap"><%- avatar(sel.patient_name, 'lg', sel.patient_id) %><div><h2><%= sel.patient_name %></h2><span class="muted">Age <%= sel.age ?? '—' %> · <%= (sel.address || 'Dhaka').split(',').pop().trim() %> · Requested <%= friendly(sel.created_at) %></span></div></div><%- badge(sel.status) %></div>
+    <div class="item mt"><div><span class="muted small">Reported problem</span><p style="color:var(--ink)"><%= entry ? entry.description : sel.reason %></p></div></div>
+    <div class="chips mt-s">
+      <% if (entry) { const r = JSON.parse(entry.result_json || '{}'); if (r.specialties) { %><%- pill('AI suggested: ' + r.specialties[0].specialty) %><% } } %>
+      <% if (prior) { %><%- pill('Previous: ' + prior.slice(0, 40), 'purple') %><% } %>
+      <%- pill('Verified account', 'green') %><%- pill(sel.mode === 'online' ? 'Online' : 'In person', 'gray') %>
+    </div>
+    <% if (sel.status === 'reschedule_requested' && sel.preferred_time) { %>
+      <div class="note blue mt"><%- icon('calendar', 18) %><span class="grow">Patient asked for <b><%= /^\d{4}-\d{2}-\d{2}T/.test(sel.preferred_time) ? friendly(sel.preferred_time) : sel.preferred_time %></b></span>
+        <% if (/^\d{4}-\d{2}-\d{2}T/.test(sel.preferred_time)) { %><form method="post" action="/doctor/appointments/<%= sel.id %>/accept-preferred"><%- include('../partials/csrf') %><button class="btn sm">Accept this time</button></form><% } %></div>
+    <% } else if (sel.status === 'requested' && sel.preferred_time && /^\d{4}-\d{2}-\d{2}T/.test(sel.preferred_time)) { %>
+      <div class="note green mt slot-approve"><%- icon('calendar', 20) %><span class="grow">Patient booked your free slot <b><%= friendly(sel.preferred_time) %></b> · fee <%= money(profile.fee) %></span>
+        <form method="post" action="/doctor/appointments/<%= sel.id %>/accept-preferred"><%- include('../partials/csrf') %><button class="btn green sm"><%- icon('check', 16) %> Approve</button></form>
+        <form method="post" action="/doctor/appointments/<%= sel.id %>/decline" data-confirm="Delete this booking? The patient will be notified."><%- include('../partials/csrf') %><input type="hidden" name="note" value="The selected time is not possible."><button class="btn danger sm"><%- icon('x', 16) %> Delete</button></form></div>
+    <% } else if (sel.preferred_time) { %><p class="muted small mt-s">Patient prefers: <%= /^\d{4}-\d{2}-\d{2}T/.test(sel.preferred_time) ? friendly(sel.preferred_time) : sel.preferred_time %></p><% } %>
+    <div class="note mt"><%- icon('shield', 18) %> Reports are visible only after the patient approves your access request.</div>
+  </section>
+</div>
+<div class="grid g-main mt">
+  <form class="card" method="post" action="/doctor/appointments/<%= sel.id %>/propose"><%- include('../partials/csrf') %>
+    <div class="card-h"><h2>Propose a consultation time</h2><%- pill(new Date(day + 'T00:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })) %></div>
+    <div class="days"><% for (const d of strip) { %><a class="day <%= d.day === day ? 'on' : '' %> <%= d.open ? '' : 'closed' %>" href="?id=<%= sel.id %>&day=<%= d.day %>"><small><%= d.dow %></small><b><%= d.num %></b></a><% } %></div>
+    <div class="row between mt"><b><%= new Date(day + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }) %></b>
+      <span class="legend"><span><i style="background:var(--indigo)"></i>Selected</span><span><i style="background:#fff;border:1px solid #cbd5e1"></i>Available</span><span><i style="background:#e2e8f0"></i>Already booked</span></span></div>
+    <div class="slots mt-s">
+      <% if (!slots.length) { %><div class="empty small" style="grid-column:1/-1"><%= off === 'closed' ? 'You are not available this day. Pick another day or update your schedule.' : off %></div><% } %>
+      <% for (const s of slots) { %><label class="slot"><input type="checkbox" name="slots" value="<%= s.iso %>" data-label="<%= new Date(s.iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) %> · <%= s.label %>" <%= s.state !== 'open' ? 'disabled' : '' %> <%= sel.preferred_time === s.iso ? 'checked' : '' %>><span><%= s.label %></span></label><% } %>
+    </div>
+    <p class="muted small mt-s">Pick one time, or up to three so the patient can choose.</p>
+    <div class="fgrid mt">
+      <div><b class="small">Consultation type</b><div class="seg mt-s"><label><input type="radio" name="mode" value="in_person" <%= sel.mode !== 'online' ? 'checked' : '' %> <%= profile.in_person ? '' : 'disabled' %>><span>In person</span></label><label><input type="radio" name="mode" value="online" <%= sel.mode === 'online' ? 'checked' : '' %> <%= profile.online ? '' : 'disabled' %>><span>Online</span></label></div></div>
+      <label class="f">Duration<select name="duration"><% for (const d of [15, 20, 30, 45, 60]) { %><option value="<%= d %>" <%= d === (sel.duration || profile.slot_minutes) ? 'selected' : '' %>><%= d %> minutes</option><% } %></select></label>
+    </div>
+    <label class="f">Note to patient (optional)<textarea name="note" style="min-height:80px" placeholder="Please bring your previous prescriptions and any recent reports."><%= sel.doctor_note || '' %></textarea></label>
+    <div class="row"><button class="btn lg">Send time proposal</button>
+      <button class="btn danger" formaction="/doctor/appointments/<%= sel.id %>/decline" formnovalidate data-confirm-click="Decline this request? The patient will be notified.">Decline</button></div>
+  </form>
+  <div class="stack">
+    <section class="card soft" data-preview data-spec="<%= user.subtitle %>"><h2 style="margin-bottom:14px">What the patient will see</h2>
+      <div class="item" style="background:#fff;display:block"><span class="muted small">Proposed by <%= user.full_name %></span>
+        <div style="font-size:20px;font-weight:800;color:var(--ink)" data-p-time>Pick a time</div><div class="meta" data-p-meta></div>
+        <div class="row mt-s"><span class="btn sm">Confirm</span><span class="btn ghost sm">Reschedule</span></div></div>
+      <p class="muted small mt-s">The patient is notified in the portal and the history is saved.</p></section>
+    <section class="card"><h2 style="margin-bottom:14px">Your schedule, <%= new Date(day + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) %></h2>
+      <% if (!daySchedule.length) { %><div class="empty small">Nothing booked yet.</div><% } %>
+      <div class="timeline"><% for (const a of daySchedule) { %><div class="tl"><span class="dot <%= a.status === 'completed' ? 'green' : a.status === 'proposed' ? 'orange' : 'blue' %>"></span><b style="font-size:15px"><%= fmtTime(a.proposed_time) %> · <%= a.patient_name %></b><span class="small"><%= (a.reason || '').slice(0, 36) %> · <%= label(a.status) %></span></div><% } %></div></section>
+  </div>
+</div>
+<% } %>
+<%- include('../partials/bottom') %>

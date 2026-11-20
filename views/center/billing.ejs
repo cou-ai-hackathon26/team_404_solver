@@ -1,0 +1,15 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Billing</h1><p>Test fees collected at the center. Online payment can be added with a payment gateway.</p></div></div>
+<div class="grid g3">
+  <div class="stat"><div class="top"><span class="tile t-blue"><%- icon('card', 24) %></span></div><span class="lbl">Billed this month</span><span class="num"><%= money(sum.total) %></span><span class="sub">Collected and completed tests</span></div>
+  <div class="stat"><div class="top"><span class="tile t-teal"><%- icon('check', 24) %></span></div><span class="lbl">Paid</span><span class="num"><%= money(sum.paid) %></span><span class="sub">Marked as paid</span></div>
+  <div class="stat"><div class="top"><span class="tile t-orange"><%- icon('clock', 24) %></span></div><span class="lbl">Due</span><span class="num"><%= money(sum.total - sum.paid) %></span><span class="sub">Collect at the counter</span></div>
+</div>
+<div class="grid g-main mt">
+  <section class="card"><h2 style="margin-bottom:12px">Recent tests</h2>
+    <div class="tbl-wrap"><table class="tbl"><tr><th>Date</th><th>Patient</th><th>Test</th><th class="num">Fee</th><th>Status</th></tr>
+      <% for (const r of rows) { %><tr><td><%= shortDate(r.updated_at) %></td><td><b><%= r.patient_name %></b></td><td><%= r.test_name %></td><td class="num"><%= money(r.price) %></td>
+        <td><% if (r.paid) { %><%- pill('Paid', 'green') %><% } else { %><form method="post" action="/center/billing/<%= r.id %>/paid"><%- include('../partials/csrf') %><button class="btn ghost sm">Mark paid</button></form><% } %></td></tr><% } %></table></div></section>
+  <section class="card"><div class="card-h"><h2>Completed tests</h2><%- pill('Last 6 months') %></div><%- areaChart(chart.values, chart.labels) %></section>
+</div>
+<%- include('../partials/bottom') %>

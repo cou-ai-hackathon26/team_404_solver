@@ -1,0 +1,38 @@
+<%- include('../partials/top') %>
+<section class="hero compact emergency med">
+  <div><span class="chip"><span class="pulse-dot"></span> Live · 24/7</span><h1>Ambulance near you</h1><p>See online ambulances around you on the map, compare distance, arrival time and fare, then request one in a tap. For life-threatening emergencies also call <b>999</b>.</p>
+    <div class="actions"><a class="btn white" href="tel:999"><%- icon('phone', 18) %> Call 999</a><a class="btn glass" href="/blood">Need blood?</a></div></div>
+  <%- include('../partials/stickers', { set: 'emergency' }) %>
+</section>
+<% if (active) { %><div class="alert info mt"><b>You have an active request.</b> <a href="/emergency/trips/<%= active.id %>">Track your ambulance →</a></div><% } %>
+<div class="grid g-main mt">
+  <section class="card map-card"><div class="row between"><h2><%- icon('map', 20) %> Live map</h2><span class="muted small"><span class="pulse-dot"></span> <span data-gps>Finding your location…</span> · refreshes every 8 s</span></div>
+    <div class="map lg" data-map data-me="live" data-fill="amb-form" data-poll="/emergency/nearby" data-every="8000" data-points="<%= JSON.stringify(points) %>"></div></section>
+  <form class="card" method="post" action="/emergency/request" id="amb-form"><%- include('../partials/csrf') %>
+    <h2>Request an ambulance</h2>
+    <input type="hidden" name="lat" value="<%= me.lat ?? '' %>"><input type="hidden" name="lng" value="<%= me.lng ?? '' %>">
+    <label class="f mt-s">Pickup address<input name="pickup_address" value="<%= me.address || '' %>" placeholder="House, road, area" required></label>
+    <label class="f">Going to (hospital)<input name="destination" placeholder="e.g. Dhaka Medical College Hospital"></label>
+    <label class="f">Contact phone<input name="phone" value="<%= phone || '' %>" required></label>
+    <label class="f">Condition (optional)<input name="note" placeholder="e.g. elderly patient, breathing difficulty"></label>
+    <input type="hidden" name="ambulance_id" value="nearest">
+    <button class="btn red block lg" <%= active || !list.some((a) => !a.busy) ? 'disabled' : '' %>><%- icon('ambulance', 20) %> Request nearest ambulance</button>
+    <p class="muted small mt-s">Your live GPS location is sent with the request. You can also pick a specific ambulance below.</p>
+  </form>
+</div>
+<div class="row between mt"><h2>Online ambulances (<%= list.length %>)</h2><span class="muted">Sorted by distance from you</span></div>
+<% if (!list.length) { %><div class="empty mt-s">No ambulance is online near you right now. Call 999.</div><% } %>
+<div class="grid g3 mt-s">
+  <% list.forEach((a, i) => { %>
+    <article class="card amb-card <%= a.busy ? 'busy' : '' %>" style="--d:<%= i * 60 %>ms">
+      <div class="row nowrap"><span class="tile t-red lg"><%- icon('ambulance', 26) %></span><div class="grow"><h3><%= a.service_name %></h3><span class="muted small"><%= a.vehicle_no %> · <%= a.kind %></span></div></div>
+      <div class="grid g3 mt-s amb-stats"><div><small>Distance</small><b><%= a.distance != null ? a.distance + ' km' : '—' %></b></div><div><small>Arrives in</small><b><%= a.eta ? '~' + a.eta + ' min' : '—' %></b></div><div><small>Est. fare</small><b><%= money(a.fare) %></b></div></div>
+      <div class="chips mt-s"><%- a.busy ? pill('On a trip', 'amber') : '<span class="badge green"><span class="pulse-dot green"></span> Available</span>' %><%- pill(a.base_area || 'Dhaka', 'gray') %></div>
+      <form method="post" action="/emergency/request" class="mt-s" data-copy-from="amb-form"><%- include('../partials/csrf') %><input type="hidden" name="ambulance_id" value="<%= a.id %>">
+        <button class="btn block <%= a.busy ? 'ghost' : '' %>" <%= a.busy || active ? 'disabled' : '' %>>Request this ambulance</button></form>
+    </article>
+  <% }) %>
+</div>
+<% if (history.length) { %><section class="card mt"><h2>Your recent requests</h2>
+  <% for (const h of history) { %><a class="item mt-s" href="/emergency/trips/<%= h.id %>"><span class="tile t-red sm"><%- icon('ambulance', 18) %></span><div class="grow"><b><%= h.service_name %></b><div class="meta"><%= h.vehicle_no %> · <%= fmtDateTime(h.created_at) %></div></div><%- badge(h.status === 'on_the_way' ? 'out_for_delivery' : h.status, label(h.status)) %></a><% } %></section><% } %>
+<%- include('../partials/bottom') %>

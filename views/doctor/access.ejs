@@ -1,0 +1,11 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Report access</h1><p>Patients decide who sees their reports, and for how long.</p></div></div>
+<div class="grid g2">
+  <section class="card"><h2 style="margin-bottom:12px">Active access</h2>
+    <% if (!grants.length) { %><div class="empty small">No active access.</div><% } %>
+    <% for (const g of grants) { %><a class="item" href="/doctor/patients?id=<%= g.patient_id %>"><%- avatar(g.patient_name, 'sm', g.patient_id) %><div class="grow"><b><%= g.patient_name %></b><div class="meta"><%= g.report_id ? g.test_name : 'All reports' %> · <%= g.source === 'share' ? 'Shared by patient' : 'Approved request' %> · until <%= friendly(g.expires_at) %></div></div></a><% } %></section>
+  <section class="card"><h2 style="margin-bottom:12px">Your requests</h2>
+    <% if (!requests.length) { %><div class="empty small">You have not requested access.</div><% } %>
+    <% for (const r of requests) { %><div class="item"><div class="grow"><b><%= r.patient_name %></b><div class="meta"><%= r.reason %> · <%= ago(r.created_at) %></div></div><%- badge(r.status) %></div><% } %></section>
+</div>
+<%- include('../partials/bottom') %>

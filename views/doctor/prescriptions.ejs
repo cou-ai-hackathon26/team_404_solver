@@ -1,0 +1,9 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Prescriptions</h1><p>Signed e-prescriptions are verified automatically and cannot be changed by pharmacies.</p></div></div>
+<% if (toWrite.length) { %><section class="card soft"><h2 style="margin-bottom:12px">Consultations without a prescription</h2>
+  <% for (const a of toWrite) { %><div class="item" style="background:#fff"><%- avatar(a.patient_name, 'sm', a.patient_id) %><div class="grow"><b><%= a.patient_name %></b><div class="meta"><%= friendly(a.proposed_time) %> · <%= (a.reason || '').slice(0, 50) %></div></div><a class="btn sm" href="/doctor/appointments/<%= a.id %>/prescribe"><%- icon('pen', 16) %>Write</a></div><% } %></section><% } %>
+<section class="card mt"><h2 style="margin-bottom:12px">Signed prescriptions</h2>
+  <% if (!list.length) { %><div class="empty small">None yet.</div><% } %>
+  <div class="tbl-wrap"><table class="tbl"><tr><th>Date</th><th>Patient</th><th>Medicines</th><th>Diagnosis</th><th></th></tr>
+    <% for (const p of list) { %><tr><td><%= shortDate(p.created_at) %></td><td><b><%= p.patient_name %></b></td><td><%= p.meds || '—' %></td><td class="muted"><%= (p.diagnosis || '').slice(0, 60) %></td><td><% if (p.appointment_id) { %><a class="btn ghost sm" href="/doctor/appointments/<%= p.appointment_id %>">Open</a><% } %></td></tr><% } %></table></div></section>
+<%- include('../partials/bottom') %>

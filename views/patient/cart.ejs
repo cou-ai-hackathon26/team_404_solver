@@ -1,0 +1,31 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Your cart</h1><p>We checked every verified pharmacy for these medicines.</p></div><a class="btn ghost" href="/patient/shop"><%- icon('plus', 16) %> Add more medicines</a></div>
+<% if (!items.length) { %><div class="empty">Your cart is empty. <a href="/patient/shop">Browse medicines</a></div><% } else { %>
+<div class="grid g-main-r">
+  <section class="card"><div class="card-h"><h2>Medicines (<%= items.length %>)</h2><form method="post" action="/patient/shop/cart/clear"><%- include('../partials/csrf') %><button class="link small">Clear</button></form></div>
+    <% for (const i of items) { %><form method="post" action="/patient/shop/cart" class="item"><%- include('../partials/csrf') %><input type="hidden" name="medicine_id" value="<%= i.id %>"><input type="hidden" name="set" value="1"><input type="hidden" name="back" value="cart">
+      <div class="grow"><b><%= i.name %> <%= i.strength %></b><div class="meta"><%= i.brand %> · <%= i.form %><%= i.rx_required ? ' · prescription needed' : '' %></div></div>
+      <div class="qty sm"><button type="button" data-qty="-1">−</button><input type="number" name="qty" value="<%= i.quantity %>" min="0" max="500" data-autosubmit><button type="button" data-qty="1">+</button></div>
+      <button class="btn ghost sm" name="qty" value="0" title="Remove"><%- icon('x', 15) %></button></form><% } %>
+    <% if (items.some((i) => i.rx_required)) { %><div class="note mt-s"><%- icon('file', 18) %> Some medicines need a prescription. You can attach one at checkout.</div><% } %>
+    <section class="map-card mt"><div class="map sm" data-map data-me="live" data-points="<%= JSON.stringify(points) %>"></div></section>
+  </section>
+  <section>
+    <div class="row between"><h2>Pharmacies for your cart</h2><div class="seg"><% for (const [k, t] of [['nearest', 'Nearest'], ['cheapest', 'Lowest total'], ['discount', 'Best discount']]) { %><label><input type="radio" name="sort" value="<%= k %>" <%= sort === k ? 'checked' : '' %> data-go="?sort=<%= k %>"><span><%= t %></span></label><% } %></div></div>
+    <% if (!options.length) { %><div class="empty mt-s">No pharmacy has these medicines in stock right now.</div><% } %>
+    <% options.forEach((p, i) => { %>
+      <article class="card mt-s pharm-cmp <%= p.all ? '' : 'partial' %>" style="--d:<%= i * 60 %>ms">
+        <div class="row between nowrap"><div class="row nowrap"><span class="rank"><%= i + 1 %></span><div><h3 style="font-size:18px"><%= p.name %></h3><span class="muted small"><%= km(p.distance) %> · ~<%= p.eta %> min · <%= p.rating.count ? p.rating.average.toFixed(1) + '★ (' + p.rating.count + ')' : 'No reviews yet' %></span></div></div>
+          <div style="text-align:right"><% if (p.saved) { %><s class="muted small"><%= money(p.regular) %></s><% } %><div class="price-big"><%= money(p.subtotal) %></div><span class="muted small">+ <%= money(p.delivery_fee) %> delivery</span></div></div>
+        <div class="chips mt-s"><%- p.all ? pill('Has all ' + items.length + ' medicines', 'green') : pill(p.has + ' of ' + items.length + ' available', 'amber') %><% if (p.pct) { %><%- pill(p.pct + '% discount · save ' + money(p.saved), 'purple') %><% } %><% if (i === 0) { %><%- pill('Best match', 'blue') %><% } %></div>
+        <table class="tbl mini mt-s"><tr><th>Medicine</th><th>Unit</th><th>10 pcs</th><th>Qty</th><th style="text-align:right">Total</th></tr>
+          <% for (const l of p.lines) { %><tr class="<%= l.available ? '' : 'muted' %>"><td><%= l.item.name %> <%= l.item.strength %></td>
+            <td><% if (l.unit != null) { %><% if (l.discount) { %><s class="muted"><%= money(l.price) %></s> <% } %><%= l.unit.toFixed(2).replace(/\.00$/, '') %><% } else { %>—<% } %></td>
+            <td><%= l.unit != null ? money(l.unit * 10) : '—' %></td><td><%= l.available %><%= l.available < l.item.quantity ? ' / ' + l.item.quantity : '' %></td><td style="text-align:right"><%= l.unit != null ? money(l.unit * l.available) : 'Not in stock' %></td></tr><% } %></table>
+        <a class="btn block mt-s" href="/patient/shop/checkout?pharmacy=<%= p.id %>">Choose <%= p.name %> · <%= money(p.subtotal + p.delivery_fee) %></a>
+      </article>
+    <% }) %>
+  </section>
+</div>
+<% } %>
+<%- include('../partials/bottom') %>

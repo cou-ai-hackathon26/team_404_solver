@@ -1,0 +1,35 @@
+<%- include('../partials/top') %>
+<section class="hero compact emergency med">
+  <div><span class="chip"><span class="pulse-dot <%= a.online ? 'green' : '' %>"></span> <%= a.online ? 'Online' : 'Offline' %></span><h1><%= a.service_name %></h1><p><%= a.vehicle_no %> · <%= a.kind %> · Base fare <%= money(a.base_fare) %> + <%= money(a.per_km) %>/km</p>
+    <div class="actions"><form method="post" action="/ambulance/online"><%- include('../partials/csrf') %><input type="hidden" name="on" value="<%= a.online ? 0 : 1 %>"><button class="btn white lg"><%= a.online ? 'Go offline' : 'Go online' %></button></form></div></div>
+  <div class="hero-side"><small>Live location</small><b><%= a.online ? (live ? 'Sharing GPS' : 'Waiting for GPS') : 'Hidden' %></b><div><%= a.online ? 'Keep this page open on the driver’s phone.' : 'Go online to appear on patients’ maps.' %></div></div>
+  <%- include('../partials/stickers', { set: 'emergency' }) %>
+</section>
+<span class="hidden" data-share-location="<%= a.online ? 1 : 0 %>"></span>
+<% if (a.online) { %><div class="hidden" data-auto-refresh="15000"></div><% } %>
+<div class="grid g4 mt"><% for (const s of cards) { %><%- include('../partials/stat', { s }) %><% } %></div>
+<div class="grid g-main mt">
+  <section class="card map-card"><div class="row between"><h2><%- icon('map', 20) %> <%= active ? 'Current trip' : 'Your position' %></h2><% if (active) { %><span class="muted">Patient is <b data-distance><%= active.distance != null ? active.distance + ' km' : '' %></b> away</span><% } %></div>
+    <div class="map lg" data-map data-target="pickup" data-points="<%= JSON.stringify(points) %>"></div></section>
+  <div class="stack">
+    <% if (active) { %>
+      <section class="card warm"><h2>Active trip</h2>
+        <div class="row nowrap mt-s"><%- avatar(active.patient_name, 'md', active.patient_id) %><div class="grow"><b><%= active.patient_name %></b><div class="meta"><%= active.pickup_address %></div></div><a class="btn green sm" href="tel:<%= active.phone || active.patient_phone %>"><%- icon('phone', 16) %> Call</a></div>
+        <% if (active.note) { %><div class="note mt-s"><%- icon('activity', 18) %> <%= active.note %></div><% } %>
+        <div class="toggle-row"><span>Hospital</span><b><%= active.destination || 'Not given' %></b></div>
+        <div class="toggle-row"><span>Fare</span><b><%= money(active.fare) %></b></div>
+        <div class="toggle-row"><span>Status</span><b><%= STATUS_TEXT[active.status] %></b></div>
+        <% const next = { accepted: ['on_the_way', 'Start trip'], on_the_way: ['arrived', 'I have arrived'], arrived: ['completed', 'Complete trip'] }[active.status]; %>
+        <% if (next) { %><form method="post" action="/ambulance/requests/<%= active.id %>/<%= next[0] %>" class="mt-s"><%- include('../partials/csrf') %><button class="btn block lg"><%= next[1] %></button></form><% } %>
+        <a class="btn ghost block mt-s" target="_blank" rel="noopener" href="https://www.openstreetmap.org/directions?to=<%= active.pickup_lat %>%2C<%= active.pickup_lng %>">Open directions</a>
+      </section>
+    <% } %>
+    <section class="card"><h2>Incoming requests</h2>
+      <% if (!incoming.length) { %><div class="empty small"><%= a.online ? 'No requests yet. New ones appear here with an alert.' : 'Go online to receive requests.' %></div><% } %>
+      <% for (const r of incoming) { %><div class="item incoming"><span class="tile t-red sm"><%- icon('bell', 18) %></span><div class="grow"><b><%= r.patient_name %></b><div class="meta"><%= r.pickup_address %> · <%= r.distance != null ? r.distance + ' km' : '' %> · <%= money(r.fare) %></div><% if (r.note) { %><div class="meta"><%= r.note %></div><% } %></div>
+        <form method="post" action="/ambulance/requests/<%= r.id %>/accept"><%- include('../partials/csrf') %><button class="btn green sm">Accept</button></form>
+        <form method="post" action="/ambulance/requests/<%= r.id %>/decline"><%- include('../partials/csrf') %><button class="btn danger sm">Decline</button></form></div><% } %>
+    </section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

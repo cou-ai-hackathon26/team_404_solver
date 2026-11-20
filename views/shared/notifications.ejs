@@ -1,0 +1,13 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Notifications</h1><p>Updates on appointments, reports, orders and access.</p></div>
+  <form method="post" action="/notifications/read-all"><%- include('../partials/csrf') %><button class="btn ghost sm">Mark all as read</button></form></div>
+<div class="card">
+  <div class="filter" style="margin-bottom:16px"><a href="?filter=all" class="<%= filter === 'all' ? 'on' : '' %>">All</a><a href="?filter=unread" class="<%= filter === 'unread' ? 'on' : '' %>">Unread</a></div>
+  <% if (!items.length) { %><div class="empty">Nothing here yet.</div><% } %>
+  <% const KI = { report: ['file','t-teal'], appointment: ['calendar','t-blue'], access: ['shield','t-orange'], order: ['pill','t-pink'], test: ['flask','t-sky'], reminder: ['alarm','t-purple'], blood: ['drop','t-red'], review: ['star','t-orange'], account: ['user','t-blue'] }; %>
+  <% for (const n of items) { const k = KI[n.kind] || ['bell','t-blue']; %>
+    <a class="notif <%= n.is_read ? '' : 'unread' %>" href="/notifications/<%= n.id %>/open"><span class="tile sm <%= k[1] %>"><%- icon(k[0], 18) %></span>
+      <span><b><%= n.title %></b><small><%= n.body %></small><small><%= ago(n.created_at) %></small></span></a>
+  <% } %>
+</div>
+<%- include('../partials/bottom') %>

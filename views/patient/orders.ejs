@@ -1,0 +1,25 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Order history</h1><p>Your previous prescriptions and medicine orders.</p></div><%- pill(cards[2].value + ' active', 'amber') %></div>
+<div class="grid g4"><% for (const s of cards) { %><%- include('../partials/stat', { s }) %><% } %></div>
+<div class="grid g-main mt">
+  <section class="card">
+    <div class="card-h"><h2>Orders</h2><div class="filter"><% for (const [k, t] of [['all','All'],['active','Active'],['delivered','Delivered'],['cancelled','Cancelled']]) { %><a href="?f=<%= k %>" class="<%= f === k ? 'on' : '' %>"><%= t %></a><% } %></div></div>
+    <% if (!orders.length) { %><div class="empty small">No orders here.</div><% } %>
+    <% for (const o of orders) { %>
+      <div class="item"><span class="tile sm t-blue"><%- icon('pill', 18) %></span>
+        <div class="grow"><b><%= o.pharmacy %></b><div class="meta"><%= code(o.id) %> · <%= shortDate(o.created_at) %> · <%= o.n %> medicine<%= o.n > 1 ? 's' : '' %></div></div>
+        <b><%= money(o.total) %></b>
+        <%- o.partial && o.status === 'delivered' ? pill('Partly fulfilled') : badge(o.status) %>
+        <% if (!['delivered','rejected','cancelled'].includes(o.status)) { %><a class="btn sm" href="/patient/orders/<%= o.id %>">Track order</a>
+        <% } else if (o.status === 'delivered' && !o.reviewed) { %><a class="btn ghost sm" href="/patient/orders/<%= o.id %>#review">Rate</a>
+        <% } else if (o.status === 'delivered' && o.prescription_id) { %><form method="post" action="/patient/orders/<%= o.id %>/reorder"><%- include('../partials/csrf') %><button class="btn ghost sm">Reorder</button></form>
+        <% } else { %><a class="btn ghost sm" href="/patient/orders/<%= o.id %>">View</a><% } %></div>
+    <% } %>
+  </section>
+  <section class="card"><h2 style="margin-bottom:14px">Prescriptions</h2>
+    <% for (const p of prescriptions) { %><div class="item"><div class="grow"><b><%= shortDate(p.created_at) %> · <%= p.doctor_name || 'Uploaded' %></b><div class="meta"><%= p.n %> medicine<%= p.n === 1 ? '' : 's' %><%= p.tests ? ' · ' + p.tests + ' tests' : '' %></div></div><a class="btn ghost sm" href="/patient/order?rx=<%= p.id %>">View</a></div><% } %>
+    <% if (!prescriptions.length) { %><div class="empty small">No prescriptions yet.</div><% } %>
+    <p class="muted small mt-s">Prescription-only medicines need a valid prescription.</p>
+  </section>
+</div>
+<%- include('../partials/bottom') %>

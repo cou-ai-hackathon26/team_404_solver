@@ -1,0 +1,10 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Payments</h1><p>Cash on delivery is marked paid when the rider delivers. Online payments are confirmed by the gateway.</p></div></div>
+<div class="grid g3">
+  <div class="stat"><div class="top"><span class="tile t-blue"><%- icon('card', 24) %></span></div><span class="lbl">Sales this month</span><span class="num"><%= money(sum.total) %></span><span class="sub">Accepted orders</span></div>
+  <div class="stat"><div class="top"><span class="tile t-teal"><%- icon('check', 24) %></span></div><span class="lbl">Received</span><span class="num"><%= money(sum.paid) %></span><span class="sub">Cash and online</span></div>
+  <div class="stat"><div class="top"><span class="tile t-orange"><%- icon('truck', 24) %></span></div><span class="lbl">Cash to collect</span><span class="num"><%= money(sum.cod) %></span><span class="sub">With riders or not yet delivered</span></div>
+</div>
+<section class="card mt"><div class="tbl-wrap"><table class="tbl"><tr><th>Order</th><th>Patient</th><th>Date</th><th>Method</th><th>Status</th><th class="num">Amount</th></tr>
+  <% for (const o of rows) { %><tr><td><a href="/pharmacy/orders/<%= o.id %>"><b><%= code(o.id) %></b></a></td><td><%= o.patient_name %></td><td><%= shortDate(o.created_at) %></td><td><%= o.payment_method === 'cod' ? 'Cash on delivery' : (o.payment_provider || 'Online') %></td><td><%- badge(o.payment_status) %></td><td class="num"><b><%= money(o.total) %></b></td></tr><% } %></table></div></section>
+<%- include('../partials/bottom') %>

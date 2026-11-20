@@ -1,0 +1,21 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Delivery</h1><p>Assign a rider when an order is ready. The patient tracks it live on a map.</p></div><%- pill(out.length + ' on the way', 'purple') %></div>
+<datalist id="riders"><% for (const r of riders) { %><option value="<%= r.rider_name %>"><% } %></datalist>
+<div class="grid g2">
+  <section class="card"><h2 style="margin-bottom:14px">Ready to dispatch</h2>
+    <% if (!ready.length) { %><div class="empty small">No orders waiting for a rider.</div><% } %>
+    <% for (const o of ready) { %><div class="item" style="display:block"><div class="row between"><div><b><%= code(o.id) %> · <%= o.patient_name %></b><div class="meta"><%= o.delivery_address %></div></div><%- badge(o.status) %></div>
+      <form method="post" action="/pharmacy/orders/<%= o.id %>/status" class="row mt-s"><%- include('../partials/csrf') %><input type="hidden" name="back" value="delivery">
+        <% if (o.status === 'preparing') { %><input type="hidden" name="status" value="ready"><button class="btn ghost sm">Mark ready</button>
+        <% } else { %><input type="hidden" name="status" value="out_for_delivery"><input name="rider_name" list="riders" placeholder="Rider name" required style="margin:0;max-width:170px"><input name="rider_phone" placeholder="Phone" style="margin:0;max-width:140px"><button class="btn sm"><%- icon('truck', 16) %>Dispatch</button><% } %></form></div><% } %>
+  </section>
+  <section class="card"><h2 style="margin-bottom:14px">Out for delivery</h2>
+    <% if (!out.length) { %><div class="empty small">No riders on the road.</div><% } %>
+    <% for (const o of out) { %><div class="item"><%- avatar(o.rider_name || 'R', 'sm', 'rider') %><div class="grow"><b><%= code(o.id) %> · <%= o.patient_name %></b><div class="meta"><%= o.rider_name %> · left <%= ago(o.out_at) %> · <%= o.payment_method === 'cod' ? 'collect ' + money(o.total) : 'paid online' %></div></div>
+      <form method="post" action="/pharmacy/orders/<%= o.id %>/status"><%- include('../partials/csrf') %><input type="hidden" name="back" value="delivery"><input type="hidden" name="status" value="delivered"><button class="btn sm green">Delivered</button></form></div><% } %>
+  </section>
+</div>
+<section class="card mt"><h2 style="margin-bottom:14px">Recently delivered</h2>
+  <% for (const o of done) { %><div class="item"><div class="grow"><b><%= code(o.id) %> · <%= o.patient_name %></b><div class="meta"><%= friendly(o.updated_at) %><%= o.rider_name ? ' · ' + o.rider_name : '' %></div></div><b><%= money(o.total) %></b><%- badge('delivered') %></div><% } %>
+  <% if (!done.length) { %><div class="empty small">Nothing yet.</div><% } %></section>
+<%- include('../partials/bottom') %>

@@ -1,0 +1,35 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Live stock</h1><p><span class="pulse-dot green"></span> Updates live. Every order you accept and every counter sale reduces stock and adds to “sold”.</p></div><a class="btn" href="?add=1#edit"><%- icon('plus', 16) %>Add medicine</a></div>
+<div class="grid g4"><% for (const c of cards) { %><%- include('../partials/stat', { s: c }) %><% } %></div>
+<div class="stack mt">
+  <section class="card" data-live-stock>
+    <div class="row between"><form method="get" class="grow" style="max-width:300px"><input name="q" value="<%= q %>" placeholder="Search" style="margin:0"></form>
+      <div class="filter"><% for (const [k, t] of [['all','All'],['low','Low stock'],['out','Out of stock'],['expiring','Expiring']]) { %><a href="?f=<%= k %>" class="<%= f === k ? 'on' : '' %>"><%= t %></a><% } %></div></div>
+    <div class="tbl-wrap mt"><table class="tbl"><tr><th>Medicine</th><th>In stock</th><th>Sold</th><th>Price</th><th>Status</th><th>Quick update</th></tr>
+      <% for (const s of stock) { const st = s.quantity === 0 ? 'out' : s.quantity < LOW ? 'low' : 'ok'; %><tr>
+        <td><b><%= s.name %> <%= s.strength %></b><div class="muted small"><%= s.brand %> · <%= s.form %><%= s.expiry ? ' · exp ' + s.expiry : '' %></div></td>
+        <td style="min-width:150px" data-stock-row="<%= s.id %>"><span class="small"><b data-qty><%= s.quantity %></b> units</span><div class="bar mt-s"><i class="<%= st === 'ok' ? '' : st === 'low' ? 'low' : 'low' %>" style="width:<%= Math.max(3, Math.min(100, s.quantity / 2)) %>%"></i></div></td>
+        <td><b data-sold="<%= s.id %>"><%= s.sold %></b><div class="muted small" data-upd="<%= s.id %>"><%= s.updated_at ? ago(s.updated_at) : '' %></div></td>
+        <td><b><%= money(s.price) %></b> <span class="muted small">/unit</span><div class="muted small"><%= money(s.price * 10) %> / 10<%= s.discount_pct ? ' · ' + s.discount_pct + '% off' : '' %></div></td>
+        <td><%- s.rx_required && st === 'ok' ? pill('Prescription only', 'amber') : st === 'out' ? pill('Out of stock', 'red') : st === 'low' ? pill('Low', 'amber') : pill('In stock', 'green') %></td>
+        <td><form method="post" action="/pharmacy/stock/<%= s.id %>/adjust" class="row nowrap adjust"><%- include('../partials/csrf') %><input type="number" name="amount" min="1" placeholder="Qty" required>
+          <button class="btn green sm" name="kind" value="add" title="Stock received">+ In</button><button class="btn ghost sm" name="kind" value="sold" title="Sold at counter">− Sold</button>
+          <a class="btn ghost sm" href="?edit=<%= s.id %>&f=<%= f %>#edit">Edit</a></form></td></tr><% } %></table></div>
+    <% if (!stock.length) { %><div class="empty small mt-s">Nothing here.</div><% } %>
+  </section>
+  <section class="card soft" id="edit" style="max-width:640px"><% const e = edit; %>
+    <h2 style="margin-bottom:14px"><%= e ? 'Update: ' + e.name + ' ' + e.strength : 'Add a medicine' %></h2>
+    <form method="post" action="/pharmacy/stock"><%- include('../partials/csrf') %>
+      <% if (e) { %><input type="hidden" name="medicine_id" value="<%= e.medicine_id %>"><% } else { %>
+        <label class="f">Medicine<select name="medicine_id" required><% for (const m of medicines) { %><option value="<%= m.id %>"><%= m.name %> <%= m.strength %> (<%= m.brand %>)</option><% } %></select></label><% } %>
+      <label class="f">Stock quantity (units)<input type="number" name="quantity" min="0" value="<%= e ? e.quantity : '' %>" required></label>
+      <label class="f">Price per unit (BDT)<input type="number" step="0.5" name="price" min="0" value="<%= e ? e.price : '' %>" required></label>
+      <label class="f">Discount on this medicine (%)<input type="number" name="discount_pct" min="0" max="90" value="<%= e ? e.discount_pct : 0 %>"></label>
+      <label class="f">Expiry (month)<input type="month" name="expiry" value="<%= e ? e.expiry || '' : '' %>"></label>
+      <div class="toggle-row"><div><b>Prescription required</b><small>Set by the medicine catalogue</small></div><label class="switch"><input type="checkbox" <%= e && e.rx_required ? 'checked' : '' %> disabled><span></span></label></div>
+      <div class="toggle-row"><b>Available for delivery</b><label class="switch"><input type="checkbox" name="deliverable" value="1" <%= !e || e.deliverable ? 'checked' : '' %>><span></span></label></div>
+      <button class="btn block lg mt-s">Save stock</button>
+      <% if (e) { %><button class="btn danger block mt-s" formaction="/pharmacy/stock/<%= e.id %>/delete" data-confirm-click="Remove this medicine from your list?">Remove</button><% } %>
+    </form></section>
+</div>
+<%- include('../partials/bottom') %>

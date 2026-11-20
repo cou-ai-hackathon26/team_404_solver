@@ -1,0 +1,13 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Catalog</h1><p>Shared lists that centers and pharmacies price, and doctors prescribe from.</p></div></div>
+<div class="grid g2">
+  <section class="card"><h2>Diagnostic tests (<%= tests.length %>)</h2>
+    <form method="post" action="/admin/catalog/test" class="row nowrap mt-s"><%- include('../partials/csrf') %><input name="name" placeholder="Test name" required style="margin:0"><input name="category" placeholder="Category" style="margin:0;max-width:150px"><button class="btn sm">Add</button></form>
+    <div class="mt"><% for (const t of tests) { %><div class="toggle-row"><b><%= t.name %></b><span class="muted small"><%= t.category %></span></div><% } %></div></section>
+  <section class="card"><h2>Medicines (<%= medicines.length %>)</h2>
+    <form method="post" action="/admin/catalog/medicine" class="mt-s"><%- include('../partials/csrf') %>
+      <div class="fgrid"><input name="name" placeholder="Generic name" required><input name="brand" placeholder="Brand"><input name="form" placeholder="Form (Tablet)"><input name="strength" placeholder="Strength (500 mg)"></div>
+      <div class="row mt-s"><label class="check"><input type="checkbox" name="rx_required" value="1" checked> Prescription required</label><button class="btn sm">Add</button></div></form>
+    <div class="mt"><% for (const m of medicines) { %><div class="toggle-row"><div><b><%= m.name %> <%= m.strength %></b><small><%= m.brand %> · <%= m.form %></small></div><%- m.rx_required ? pill('Rx', 'amber') : pill('OTC', 'green') %></div><% } %></div></section>
+</div>
+<%- include('../partials/bottom') %>

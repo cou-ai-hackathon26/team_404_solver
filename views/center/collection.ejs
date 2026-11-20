@@ -1,0 +1,23 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Sample collection</h1><p>Patients visit at their booked time. Mark each sample as collected.</p></div><%- pill(today.length + ' today') %></div>
+<div class="grid g-main">
+  <section class="card"><h2 style="margin-bottom:14px">Today</h2>
+    <% if (!today.length) { %><div class="empty small">No collections scheduled for today.</div><% } %>
+    <% for (const o of today) { const late = new Date(o.scheduled_at) < new Date(); %>
+      <form class="item" method="post" action="/center/requests/<%= o.id %>/collected"><%- include('../partials/csrf') %>
+        <span class="tile <%= late ? 't-orange' : 't-blue' %>"><%- icon('clock', 22) %></span>
+        <div class="grow"><b style="font-size:16px"><%= fmtTime(o.scheduled_at) %> · <%= o.patient_name %></b><div class="meta"><%= o.test_name %> · <%= o.doctor_name || 'Walk-in' %><%= o.notes ? ' · ' + o.notes : '' %></div></div>
+        <label class="check small"><input type="checkbox" name="paid" value="1" <%= o.paid ? 'checked' : '' %>> Paid <%= money(o.price) %></label>
+        <button class="btn sm">Collected</button></form>
+    <% } %>
+  </section>
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:14px">Coming up</h2>
+      <% if (!later.length) { %><div class="empty small">Nothing scheduled.</div><% } %>
+      <div class="timeline"><% for (const o of later) { %><div class="tl"><span class="dot"></span><b style="font-size:15px"><%= friendly(o.scheduled_at) %></b><span class="small"><%= o.patient_name %> · <%= o.test_name %></span></div><% } %></div></section>
+    <section class="card"><h2 style="margin-bottom:14px">Collected, report pending</h2>
+      <% if (!collected.length) { %><div class="empty small">All reports uploaded.</div><% } %>
+      <% for (const o of collected) { %><a class="item" href="/center/upload?id=<%= o.id %>"><div class="grow"><b><%= o.patient_name %> · <%= o.test_name %></b><div class="meta">Collected <%= friendly(o.collected_at) %></div></div><%- pill('Upload') %></a><% } %></section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

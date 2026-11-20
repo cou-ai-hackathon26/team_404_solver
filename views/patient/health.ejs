@@ -1,0 +1,46 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Health status</h1><p>Log your readings. Fixed medical limits decide the status, and trends show how you are doing.</p></div>
+  <% const W = { normal: ['green','All readings normal'], watch: ['amber','Some readings to watch'], doctor: ['red','See a doctor'], urgent: ['red','Get help now'] }; if (o.worst) { %><%- pill(W[o.worst][1], W[o.worst][0]) %><% } %></div>
+<% if (o.worst === 'urgent') { %><div class="alert error"><b>A recent reading needs urgent attention.</b> If you feel unwell, call 999 or go to the nearest emergency department now.</div>
+<% } else if (o.worst === 'doctor') { %><div class="alert warn">Some readings are outside the normal range. <a href="/patient/find-doctor">Book a doctor</a> to review them.</div><% } %>
+<div class="grid" style="grid-template-columns:repeat(5,minmax(0,1fr))">
+  <% const T = { bp: ['t-red','heart'], sugar: ['t-orange','drop'], weight: ['t-blue','user'], pulse: ['t-pink','activity'], spo2: ['t-teal','activity'] };
+     for (const [k, d] of Object.entries(o.kinds)) { const lv = d.status ? d.status.level : null; %>
+    <a class="stat" href="?kind=<%= k %>" style="<%= kind === k ? 'outline:2px solid #6366f1' : '' %>">
+      <div class="top"><span class="tile sm <%= T[k][0] %>"><%- icon(T[k][1], 18) %></span><% if (lv) { %><%- badge(lv) %><% } %></div>
+      <span class="lbl"><%= d.name %></span><span class="num" style="font-size:26px"><%= d.last ? fmt(d.last) : '—' %></span>
+      <span class="sub"><%= d.last ? d.unit + ' · ' + d.trend.dir : 'No readings' %></span></a>
+  <% } %>
+</div>
+<div class="grid g-main mt">
+  <section class="card"><% const d = o.kinds[kind]; %>
+    <div class="card-h"><h2><%= d.name %> trend</h2><%- pill('Last ' + d.rows.length + ' readings') %></div>
+    <%- readingsChart(d.rows.slice(-21), { label: d.name, limit: { bp: 140, sugar: d.rows.at(-1) && d.rows.at(-1).context === 'fasting' ? 7 : 11.1, pulse: 100, spo2: 93, weight: null }[kind], limitLabel: { bp: 'High: 140', sugar: 'High', pulse: 'Above 100', spo2: 'Low: 93' }[kind] }) %>
+    <% if (kind === 'bp') { %><div class="legend mt-s"><span><i style="background:#4f46e5"></i>Systolic</span><span><i style="background:#0ea5e9"></i>Diastolic</span></div><% } %>
+    <% if (d.status) { %><div class="note <%= d.status.level === 'normal' ? '' : 'blue' %> mt"><%- icon('activity', 18) %> Latest: <b>&nbsp;<%= fmt(d.last) %> <%= d.unit %></b>&nbsp;· <%= d.status.note %>. Trend: <%= d.trend.dir %>.</div><% } %>
+  </section>
+  <section class="card soft"><h2 style="margin-bottom:14px">Log a reading</h2>
+    <form method="post" action="/patient/health"><%- include('../partials/csrf') %>
+      <label class="f">Type<select name="kind" data-reading-kind><% for (const [k, v] of Object.entries(o.kinds)) { %><option value="<%= k %>" <%= k === kind ? 'selected' : '' %>><%= v.name %></option><% } %></select></label>
+      <div class="fgrid">
+        <label class="f">Value <small data-unit></small><input name="value1" type="number" step="0.1" required></label>
+        <label class="f" data-for="bp">Diastolic (bottom)<input name="value2" type="number" step="1"></label>
+        <label class="f" data-for="sugar">When<select name="context"><option value="fasting">Fasting</option><option value="random">After meal / random</option></select></label>
+      </div>
+      <label class="f">Measured at<input type="datetime-local" name="measured_at" value="<%= toLocalInput() %>"></label>
+      <button class="btn block">Save reading</button>
+      <% if (kind === 'weight' && !profile.height_cm) { %><p class="muted small mt-s">Add your height in <a href="/patient/profile">Profile</a> to see BMI.</p><% } %>
+    </form>
+  </section>
+</div>
+<div class="grid g2 mt">
+  <section class="card"><div class="card-h"><h2>Weekly summary</h2><%- pill('Last 7 days') %></div><p><%= summary %></p>
+    <p class="muted small mt">Guidance based on standard adult limits, not a diagnosis. Your doctor can see this page only if you share your records.</p>
+    <% if (shares.length) { %><a class="btn ghost mt-s" href="/patient/records#share">Share with <%= shares[0].full_name %></a><% } %></section>
+  <section class="card"><h2 style="margin-bottom:14px">Recent readings</h2>
+    <table class="tbl"><tr><th>When</th><th>Type</th><th class="num">Value</th><th>Status</th><th></th></tr>
+      <% for (const r of recent) { const s = classify(r, profile.height_cm); %><tr><td><%= fmtDateTime(r.measured_at) %></td><td><%= o.kinds[r.kind].name %></td><td class="num"><b><%= fmt(r) %></b> <span class="muted small"><%= o.kinds[r.kind].unit %></span></td><td><%- badge(s.level) %></td>
+        <td><form method="post" action="/patient/health/<%= r.id %>/delete" data-confirm="Delete this reading?"><%- include('../partials/csrf') %><button class="link small" style="color:var(--muted)" aria-label="Delete"><%- icon('x', 14) %></button></form></td></tr><% } %></table>
+    <% if (!recent.length) { %><div class="empty small">No readings yet.</div><% } %></section>
+</div>
+<%- include('../partials/bottom') %>

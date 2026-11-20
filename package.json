@@ -1,0 +1,33 @@
+{
+  "name": "mediconnect",
+  "version": "1.0.0",
+  "description": "MediConnect: integrated healthcare platform with Patient, Doctor, Diagnostic Center, Pharmacy and Admin portals, AI doctor recommendation, medicine reminders, health tracking, chatbot and blood bank.",
+  "main": "src/server.js",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "postinstall": "node scripts/setup-env.js",
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/server.js",
+    "seed": "node --disable-warning=ExperimentalWarning src/seed.js",
+    "reset": "node --disable-warning=ExperimentalWarning src/seed.js --reset",
+    "test": "node tests/smoke.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "express-session": "^1.18.1",
+    "helmet": "^8.0.0",
+    "leaflet": "^1.9.4",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.16"
+  },
+  "optionalDependencies": {
+    "tesseract.js": "^5.1.1"
+  }
+}

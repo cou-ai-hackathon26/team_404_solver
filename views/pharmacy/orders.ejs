@@ -1,0 +1,11 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Orders</h1><p>Accept, part-fulfil or reject, then move each order through to delivery.</p></div></div>
+<div class="filter" style="margin-bottom:16px"><% for (const [k, t] of [['open','Open'],['received','New (' + (counts.received || 0) + ')'],['preparing','Preparing'],['ready','Ready'],['out_for_delivery','Out for delivery'],['delivered','Delivered'],['rejected','Rejected']]) { %><a href="?f=<%= k %>" class="<%= f === k ? 'on' : '' %>"><%= t %></a><% } %></div>
+<section class="card">
+  <% if (!orders.length) { %><div class="empty small">No orders here.</div><% } %>
+  <div class="tbl-wrap"><table class="tbl"><tr><th>Order</th><th>Patient</th><th>Placed</th><th>Items</th><th>Prescription</th><th>Payment</th><th class="num">Total</th><th>Status</th></tr>
+    <% for (const o of orders) { %><tr><td><a href="/pharmacy/orders/<%= o.id %>"><b><%= code(o.id) %></b></a></td><td><%= o.patient_name %></td><td><%= ago(o.created_at) %></td><td><%= o.n %><%= o.short && o.status === 'received' ? ' (' + o.short + ' short)' : '' %></td>
+      <td><%- !o.prescription_id ? pill('None', 'gray') : o.rx_verified || o.prescription_checked ? pill('Verified', 'green') : pill('Check', 'amber') %></td><td><%= o.payment_method === 'cod' ? 'Cash' : 'Online' %> · <%= label(o.payment_status) %></td><td class="num"><%= money(o.total) %></td>
+      <td><%- o.status === 'received' ? pill('New, action needed', 'amber') : badge(o.status) %></td></tr><% } %></table></div>
+</section>
+<%- include('../partials/bottom') %>

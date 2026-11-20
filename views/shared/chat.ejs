@@ -1,0 +1,37 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1><%= user.role === 'patient' ? 'Doctor chat' : 'Patient chats' %></h1><p><%= user.role === 'patient' ? 'Send a chat request from any doctor’s page. Once the doctor accepts, you can message here.' : 'Patients ask to chat with you. Accept to open the conversation.' %></p></div>
+  <% if (user.role === 'patient') { %><a class="btn" href="/patient/find-doctor"><%- icon('stethoscope', 17) %> Find a doctor</a><% } %></div>
+<div class="grid g-main-r chat-layout">
+  <section class="card"><h2 style="margin-bottom:12px">Conversations</h2>
+    <% if (!threads.length) { %><div class="empty small">No chats yet.</div><% } %>
+    <% for (const t of threads) { const peer = user.role === 'patient' ? t.doctor_name : t.patient_name; %>
+      <div class="item <%= sel && sel.id === t.id ? 'sel' : '' %>">
+        <%- avatar(peer, 'md', user.role === 'patient' ? t.doctor_id : t.patient_id) %>
+        <a class="grow" href="/messages/<%= t.id %>" style="color:inherit"><b><%= peer %></b><div class="meta"><%= user.role === 'patient' ? t.specialty : (t.topic || '') %><%= t.last ? ' · ' + t.last.body.slice(0, 30) : '' %></div></a>
+        <% if (t.unread) { %><span class="badge red"><%= t.unread %></span><% } %>
+        <% if (t.status === 'pending' && user.role === 'doctor') { %>
+          <form method="post" action="/messages/<%= t.id %>/accept"><%- include('../partials/csrf') %><button class="btn green sm">Accept</button></form>
+          <form method="post" action="/messages/<%= t.id %>/decline"><%- include('../partials/csrf') %><button class="btn danger sm">Decline</button></form>
+        <% } else { %><%- t.status === 'accepted' ? pill('Open', 'green') : t.status === 'pending' ? pill('Waiting', 'amber') : pill(label(t.status), 'gray') %><% } %>
+      </div>
+    <% } %>
+  </section>
+  <section class="card chat-card">
+    <% if (!sel) { %><div class="empty"><%- icon('message', 40) %><p class="mt-s">Choose a conversation.</p></div>
+    <% } else { %>
+      <div class="row between nowrap" style="border-bottom:1px solid var(--line);padding-bottom:12px"><div class="row nowrap"><%- avatar(peer.name, 'md', peer.id) %><div><b><%= peer.name %></b><div class="muted small"><%= sel.topic || (user.role === 'patient' ? sel.specialty : 'Patient') %></div></div></div>
+        <div class="row"><%- sel.status === 'accepted' ? '<span class="badge green"><span class="pulse-dot green"></span> Live</span>' : pill(label(sel.status), 'amber') %>
+          <% if (sel.status === 'accepted') { %><form method="post" action="/messages/<%= sel.id %>/close" data-confirm="Close this chat?"><%- include('../partials/csrf') %><button class="btn ghost sm">Close</button></form><% } %></div></div>
+      <div class="chat" data-live-chat="<%= sel.id %>" data-last="<%= posts.length ? posts[posts.length - 1].id : 0 %>">
+        <% if (sel.status === 'pending') { %><div class="empty small"><%= user.role === 'patient' ? 'Waiting for the doctor to accept your request.' : 'Accept the request to start chatting.' %></div><% } %>
+        <% for (const p of posts) { %><div class="msg <%= p.sender_id === user.id ? 'me' : '' %>"><div class="bubble"><%= p.body %></div><small><%= fmtTime(p.created_at) %></small></div><% } %>
+        <span id="end"></span>
+      </div>
+      <% if (sel.status === 'accepted') { %>
+        <form method="post" action="/messages/<%= sel.id %>" class="chat-input" data-live-send><%- include('../partials/csrf') %><input name="body" placeholder="Write a message…" autocomplete="off" required><button class="btn"><%- icon('send', 17) %></button></form>
+        <p class="muted small mt-s">For emergencies call 999. Chat advice does not replace an examination.</p>
+      <% } %>
+    <% } %>
+  </section>
+</div>
+<%- include('../partials/bottom') %>

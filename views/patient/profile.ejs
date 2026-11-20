@@ -1,0 +1,55 @@
+<%- include('../partials/top') %>
+<form method="post" action="/patient/profile" id="profile-form"><%- include('../partials/csrf') %></form>
+<div class="page-h"><div><h1>Profile and settings</h1><p>Manage your account, security and privacy.</p></div><button class="btn" form="profile-form">Save changes</button></div>
+<div class="grid" style="grid-template-columns:230px 1fr">
+  <nav class="card" style="padding:14px;align-self:start">
+    <% for (const [k, t] of [['personal','Personal information'],['security','Security'],['notifications','Notifications'],['privacy','Privacy and sharing'],['language','Language']]) { %>
+      <a href="#<%= k %>" class="item" style="<%= tab === k ? 'border:2px solid #6366f1;background:#fff' : 'border-color:transparent;background:none' %>;margin:0 0 4px;font-weight:600;color:var(--ink)"><%= t %></a>
+    <% } %>
+  </nav>
+  <div class="stack">
+    <section class="card soft"><div class="row nowrap"><span class="avatar xl av-blue"><%= initials(user.full_name) %></span>
+      <div class="grow"><h2 style="font-size:24px"><%= user.full_name %></h2><p class="muted">Patient ID <%= profile.patient_code %> · Member since <%= new Date(since).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) %></p>
+        <div class="chips mt-s"><%- pill('Email verified', 'green') %><%- user.phone ? pill('Phone added') : '' %><%- profile.blood_group ? pill('Blood group ' + profile.blood_group, 'red') : '' %></div></div></div></section>
+    <section class="card" id="personal"><h2 style="margin-bottom:16px">Personal information</h2>
+      <div class="fgrid">
+        <label class="f">Full name<input name="full_name" value="<%= user.full_name %>" form="profile-form" required></label>
+        <label class="f">Phone number<input name="phone" value="<%= user.phone || '' %>" form="profile-form" required></label>
+        <label class="f">Email address<input value="<%= user.email %>" disabled></label>
+        <label class="f">Date of birth<input type="date" name="date_of_birth" value="<%= profile.date_of_birth || '' %>" form="profile-form"></label>
+        <label class="f">Blood group<select name="blood_group" form="profile-form"><option value="">Unknown</option><% for (const b of ['A+','A-','B+','B-','AB+','AB-','O+','O-']) { %><option <%= profile.blood_group === b ? 'selected' : '' %>><%= b %></option><% } %></select></label>
+        <label class="f">Emergency contact<input name="emergency_contact" value="<%= profile.emergency_contact || '' %>" form="profile-form"></label>
+        <label class="f">Gender<select name="gender" form="profile-form"><option value="">Prefer not to say</option><% for (const g of ['Female','Male','Other']) { %><option <%= profile.gender === g ? 'selected' : '' %>><%= g %></option><% } %></select></label>
+        <label class="f">Height (cm) <small>for BMI</small><input type="number" name="height_cm" value="<%= profile.height_cm || '' %>" form="profile-form"></label>
+        <label class="f full">Address<input name="address" value="<%= profile.address || '' %>" form="profile-form"></label>
+      </div>
+      <div class="row"><span class="muted small">Location (for nearby doctors, centers and pharmacies):</span>
+        <input name="lat" value="<%= profile.lat ?? '' %>" placeholder="Latitude" form="profile-form" style="max-width:150px;margin:0"><input name="lng" value="<%= profile.lng ?? '' %>" placeholder="Longitude" form="profile-form" style="max-width:150px;margin:0">
+        <button type="button" class="btn ghost sm" data-geolocate form="profile-form">Use my location</button></div>
+    </section>
+    <div class="grid g2">
+      <section class="card" id="security"><h2 style="margin-bottom:16px">Security</h2>
+        <form method="post" action="/account/password"><%- include('../partials/csrf') %>
+          <label class="f">Current password<input type="password" name="current_password" required></label>
+          <label class="f">New password<input type="password" name="password" required minlength="8"></label>
+          <label class="f">Confirm new password<input type="password" name="confirm_password" required minlength="8"></label>
+          <button class="btn ghost">Change password</button></form>
+        <div class="toggle-row mt"><div><b>Email OTP at login</b><small>Required every time you log in</small></div><label class="switch"><input type="checkbox" checked disabled><span></span></label></div>
+        <% for (const s of sessions) { %><div class="item"><div class="grow"><b><%= /Mobile/.test(s.ua) ? 'Mobile browser' : (s.ua.match(/(Chrome|Firefox|Safari|Edg)/) || ['Browser'])[0] + ' on ' + ((s.ua.match(/(Windows|Mac OS X|Linux|Android|iPhone)/) || ['this device'])[0]) %></b><div class="meta"><%= s.loginAt ? 'Signed in ' + ago(s.loginAt) : 'Active' %></div></div>
+          <% if (s.current) { %><%- pill('This device', 'green') %><% } else { %><form method="post" action="/account/sessions/<%= s.key %>/logout"><%- include('../partials/csrf') %><button class="btn ghost sm">Log out</button></form><% } %></div><% } %>
+      </section>
+      <form method="post" action="/patient/profile/preferences" class="stack"><%- include('../partials/csrf') %>
+        <section class="card" id="notifications"><h2 style="margin-bottom:8px">Notifications</h2>
+          <% for (const [k, t, s] of [['notify_reports','Report uploaded','When a diagnostic report is ready'],['notify_appointments','Appointment updates','Proposed or changed times'],['notify_orders','Order status','Pharmacy order updates']]) { %>
+            <div class="toggle-row"><div><b><%= t %></b><small><%= s %></small></div><label class="switch"><input type="checkbox" name="<%= k %>" value="1" <%= profile[k] ? 'checked' : '' %>><span></span></label></div><% } %></section>
+        <section class="card soft" id="privacy"><h2 style="margin-bottom:8px">Privacy and sharing</h2>
+          <div class="toggle-row"><div><b>Approve every access request</b><small>Doctors always need your approval</small></div><label class="switch"><input type="checkbox" checked disabled><span></span></label></div>
+          <label class="f mt-s">Default access period<select name="default_access_days"><% for (const d of [1, 3, 7, 14, 30]) { %><option value="<%= d %>" <%= profile.default_access_days === d ? 'selected' : '' %>><%= d %> day<%= d > 1 ? 's' : '' %></option><% } %></select></label></section>
+        <section class="card" id="language"><h2 style="margin-bottom:8px">Language</h2>
+          <label class="f">Assistant and notification language<select name="language"><% for (const l of ['English','বাংলা']) { %><option <%= profile.language === l ? 'selected' : '' %>><%= l %></option><% } %></select></label>
+          <button class="btn">Save preferences</button></section>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

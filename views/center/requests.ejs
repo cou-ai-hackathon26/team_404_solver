@@ -1,0 +1,22 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Test requests</h1><p>Confirm a visit time, collect the sample, then upload the report.</p></div></div>
+<div class="filter" style="margin-bottom:16px">
+  <% for (const [k, t] of [['open','Open'],['requested','New (' + (counts.requested || 0) + ')'],['scheduled','Scheduled (' + (counts.scheduled || 0) + ')'],['sample_collected','Sample collected (' + (counts.sample_collected || 0) + ')'],['completed','Completed']]) { %><a href="?f=<%= k %>" class="<%= f === k ? 'on' : '' %>"><%= t %></a><% } %></div>
+<section class="card">
+  <% if (!list.length) { %><div class="empty small">No requests here.</div><% } %>
+  <% for (const o of list) { %>
+    <div class="item" style="display:block">
+      <div class="row between"><div class="row nowrap"><%- avatar(o.patient_name, 'md', o.patient_id) %><div><b style="font-size:16px"><%= o.patient_name %> · <%= o.test_name %></b><div class="meta"><%= o.doctor_name ? 'Requested by ' + o.doctor_name : 'Walk-in' %> · <%= o.patient_phone || '' %><%= o.notes ? ' · ' + o.notes : '' %><%= o.preferred_date ? ' · prefers ' + shortDate(o.preferred_date) : '' %></div></div></div>
+        <div class="row"><% if (o.price) { %><b><%= money(o.price) %></b><% } %><%- badge(o.status) %></div></div>
+      <% if (['requested','scheduled'].includes(o.status)) { %>
+      <div class="row mt-s">
+        <form method="post" action="/center/requests/<%= o.id %>/schedule" class="row nowrap"><%- include('../partials/csrf') %><input type="datetime-local" name="scheduled_at" required value="<%= o.scheduled_at ? toLocalInput(o.scheduled_at) : (o.preferred_date ? o.preferred_date + 'T10:00' : '') %>" style="margin:0;max-width:230px"><button class="btn sm"><%= o.status === 'scheduled' ? 'Change time' : 'Confirm time' %></button></form>
+        <form method="post" action="/center/requests/<%= o.id %>/collected"><%- include('../partials/csrf') %><button class="btn ghost sm">Sample collected</button></form>
+        <% if (o.status === 'requested') { %><form method="post" action="/center/requests/<%= o.id %>/reject" data-confirm="Decline this request? The patient can book another center."><%- include('../partials/csrf') %><button class="btn danger sm">Decline</button></form><% } %>
+        <% if (o.scheduled_at) { %><span class="muted small">Scheduled <%= friendly(o.scheduled_at) %></span><% } %>
+      </div>
+      <% } else if (o.status === 'sample_collected') { %><div class="row mt-s"><a class="btn sm" href="/center/upload?id=<%= o.id %>"><%- icon('upload', 16) %>Upload report</a><span class="muted small">Collected <%= friendly(o.collected_at) %></span></div><% } %>
+    </div>
+  <% } %>
+</section>
+<%- include('../partials/bottom') %>

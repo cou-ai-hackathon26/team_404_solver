@@ -1,0 +1,25 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Account & security</h1><p>Your login details, password and signed-in devices.</p></div></div>
+<div class="grid g2">
+  <section class="card"><h2>Your details</h2>
+    <form method="post" action="/account/details" class="mt-s"><%- include('../partials/csrf') %>
+      <label class="f">Email (login)<input value="<%= user.email %>" disabled></label>
+      <label class="f">Full name<input name="full_name" value="<%= user.full_name %>" required></label>
+      <label class="f">Phone<input name="phone" value="<%= user.phone || '' %>" required></label>
+      <button class="btn">Save</button></form></section>
+  <section class="card"><h2>Change password</h2>
+    <form method="post" action="/account/password" class="mt-s"><%- include('../partials/csrf') %>
+      <label class="f">Current password<input type="password" name="current_password" required></label>
+      <label class="f">New password<input type="password" name="password" required minlength="8"></label>
+      <label class="f">Confirm new password<input type="password" name="confirm_password" required minlength="8"></label>
+      <button class="btn">Change password</button></form></section>
+</div>
+<section class="card mt"><div class="card-h"><h2>Signed-in devices</h2>
+  <form method="post" action="/logout-all"><%- include('../partials/csrf') %><button class="btn danger sm">Log out of all devices</button></form></div>
+  <% for (const s of sessions) { %>
+    <div class="item"><span class="tile sm t-blue"><%- icon('user', 18) %></span><div class="grow"><b><%= s.ua.slice(0, 70) %></b><div class="meta"><%= s.ip || '' %> · signed in <%= s.loginAt ? ago(s.loginAt) : 'earlier' %></div></div>
+      <% if (s.current) { %><%- pill('This device', 'green') %><% } else { %><form method="post" action="/account/sessions/<%= s.key %>/logout"><%- include('../partials/csrf') %><button class="btn ghost sm">Log out</button></form><% } %></div>
+  <% } %>
+  <p class="muted small mt-s">Email OTP is required every time you log in. Sessions end after <%= 30 %> minutes without activity.</p>
+</section>
+<%- include('../partials/bottom') %>

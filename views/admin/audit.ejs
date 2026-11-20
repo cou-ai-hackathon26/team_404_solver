@@ -1,0 +1,8 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Audit log</h1><p>Every login, record view, share, approval and admin action.</p></div>
+  <form method="get" class="row nowrap"><input name="action" value="<%= action %>" placeholder="Filter, e.g. report. or auth." style="margin:0;min-width:240px"><button class="btn ghost sm">Filter</button></form></div>
+<div class="filter" style="margin-bottom:14px"><% for (const [k, t] of [['','All'],['report.','Reports'],['access.','Access'],['auth.','Logins'],['admin.','Admin'],['blood.','Blood bank']]) { %><a href="?action=<%= k %>" class="<%= action === k ? 'on' : '' %>"><%= t %></a><% } %></div>
+<section class="card"><div class="tbl-wrap"><table class="tbl"><tr><th>When</th><th>Who</th><th>Action</th><th>Item</th><th>Patient</th><th>IP</th></tr>
+  <% for (const r of rows) { %><tr><td><%= fmtDateTime(r.created_at) %></td><td><b><%= r.actor_name || '—' %></b> <span class="muted small"><%= r.actor_role || '' %></span></td><td><code><%= r.action %></code></td><td><%= r.entity ? r.entity + ' #' + r.entity_id : '—' %></td><td><%= r.patient_name || '—' %></td><td class="muted small"><%= r.ip %></td></tr><% } %></table></div>
+  <% if (!rows.length) { %><div class="empty small">Nothing logged.</div><% } %></section>
+<%- include('../partials/bottom') %>

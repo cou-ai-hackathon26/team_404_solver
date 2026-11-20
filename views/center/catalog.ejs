@@ -1,0 +1,31 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Test catalog and prices</h1><p>Patients see these tests and approximate prices when they search.</p></div><% if (user.isCenterAdmin) { %><a class="btn" href="?add=1#edit"><%- icon('plus', 16) %>Add test</a><% } %></div>
+<div class="grid g4"><% for (const c of cards) { %><%- include('../partials/stat', { s: c }) %><% } %></div>
+<div class="grid g-main mt">
+  <section class="card">
+    <div class="row between"><form method="get" class="grow" style="max-width:320px"><input name="q" value="<%= q %>" placeholder="Search" style="margin:0"></form>
+      <div class="filter"><a href="?" class="<%= !cat ? 'on' : '' %>">All</a><% for (const c of cats) { %><a href="?cat=<%= encodeURIComponent(c) %>" class="<%= cat === c ? 'on' : '' %>"><%= c %></a><% } %></div></div>
+    <div class="tbl-wrap mt"><table class="tbl"><tr><th>Test</th><th>Category</th><th>Price</th><th>Discount</th><th>Report time</th><th>Active</th><th></th></tr>
+      <% for (const t of tests) { %><tr><td><b><%= t.name %></b></td><td><%= t.category %></td><td><b><%= money(t.price) %></b></td><td><%- t.discount_pct ? pill(t.discount_pct + '% off', 'green') : '—' %></td><td><%= t.report_time %></td>
+        <td><% if (user.isCenterAdmin) { %><form method="post" action="/center/catalog/<%= t.id %>/toggle"><%- include('../partials/csrf') %><button class="switch" style="border:0;background:none;padding:0" aria-label="Toggle <%= t.name %>"><input type="checkbox" <%= t.available ? 'checked' : '' %> tabindex="-1"><span></span></button></form><% } else { %><%- t.available ? pill('On', 'green') : pill('Off') %><% } %></td>
+        <td><% if (user.isCenterAdmin) { %><a class="btn ghost sm" href="?edit=<%= t.id %>#edit">Edit</a><% } %></td></tr><% } %></table></div>
+    <% if (!tests.length) { %><div class="empty small mt-s">No tests match.</div><% } %>
+  </section>
+  <% if (user.isCenterAdmin) { const e = edit; %>
+  <section class="card soft" id="edit"><h2 style="margin-bottom:14px"><%= e ? 'Edit test: ' + e.name : 'Add a test' %></h2>
+    <form method="post" action="/center/catalog"><%- include('../partials/csrf') %>
+      <% if (e) { %><input type="hidden" name="test_id" value="<%= e.test_id %>"><label class="f">Test name<input value="<%= e.name %>" disabled></label><label class="f">Category<input value="<%= e.category %>" disabled></label>
+      <% } else { %><label class="f">Test<select name="test_id" required><% for (const t of catalog) { %><option value="<%= t.id %>"><%= t.category %> — <%= t.name %></option><% } %></select></label><% } %>
+      <label class="f">Price (BDT)<input type="number" name="price" min="0" value="<%= e ? e.price : '' %>" required></label>
+      <label class="f">Discount (%)<input type="number" name="discount_pct" min="0" max="90" value="<%= e ? e.discount_pct : 0 %>"><small>Patients comparing centers see the discounted price.</small></label>
+      <label class="f">Report ready in<select name="report_time"><% for (const r of ['Same day', 'Next day', '2 days', '3 to 5 days']) { %><option <%= e && e.report_time === r ? 'selected' : '' %>><%= r %></option><% } %></select></label>
+      <div class="toggle-row"><b>Show to patients</b><label class="switch"><input type="checkbox" name="available" value="1" <%= !e || e.available ? 'checked' : '' %>><span></span></label></div>
+      <div class="toggle-row"><b>Online booking</b><label class="switch"><input type="checkbox" name="online_booking" value="1" <%= !e || e.online_booking ? 'checked' : '' %>><span></span></label></div>
+      <button class="btn block lg mt-s">Save changes</button>
+      <% if (e) { %><button class="btn danger block mt-s" formaction="/center/catalog/<%= e.id %>/delete" data-confirm-click="Remove <%= e.name %> from your catalog?">Remove test</button><% } %>
+    </form>
+    <form method="post" action="/center/settings/booking" class="mt"><%- include('../partials/csrf') %><div class="toggle-row"><div><b>Center-wide online booking</b><small>Turn off to take bookings by phone only</small></div><button class="btn ghost sm"><%= center.online_booking ? 'Turn off' : 'Turn on' %></button></div></form>
+  </section>
+  <% } %>
+</div>
+<%- include('../partials/bottom') %>

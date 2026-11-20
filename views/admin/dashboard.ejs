@@ -1,0 +1,24 @@
+<%- include('../partials/top') %>
+<section class="hero indigo med">
+  <div><h1>Platform overview</h1><p>The whole ecosystem at a glance: patients, doctors, diagnostic centers and pharmacies.</p>
+    <div class="actions"><a class="btn white" href="/admin/verifications">Review verifications</a><a class="btn glass" href="/admin/audit">View audit log</a></div></div>
+  <div class="hero-side"><small>Pending verifications</small><b><%= pending.length %> account<%= pending.length === 1 ? '' : 's' %></b><div><%= counts.doctor %> doctor<%= counts.doctor === 1 ? '' : 's' %>, <%= counts.center %> center<%= counts.center === 1 ? '' : 's' %>, <%= counts.pharmacy %> shop<%= counts.pharmacy === 1 ? '' : 's' %>, <%= counts.ambulance %> ambulance<%= counts.ambulance === 1 ? '' : 's' %></div></div>
+  <%- include('../partials/stickers', { set: 'doctor' }) %>
+</section>
+<div class="grid g4 mt"><% for (const c of cards) { %><%- include('../partials/stat', { s: c }) %><% } %></div>
+<div class="grid g-main mt">
+  <section class="card"><div class="card-h"><h2>Platform activity</h2><%- pill('Last 6 months') %></div><%- areaChart(activity.values, activity.labels, { label: 'Appointments, tests and orders per month' }) %></section>
+  <section class="card"><h2>Users by role</h2><div class="mt"><%- donut(ring, total.toLocaleString(), 'Accounts') %></div>
+    <div class="chips mt" style="justify-content:center"><%- pill('Patients') %><%- pill('Doctors', 'green') %><%- pill('Centers', 'amber') %><%- pill('Pharmacies', 'purple') %><%- pill('Ambulances', 'red') %></div></section>
+</div>
+<div class="grid g-main mt">
+  <section class="card"><div class="card-h"><h2>Pending verifications</h2><a href="/admin/verifications" style="text-decoration:underline;font-weight:600">View all</a></div>
+    <% if (!pending.length) { %><div class="empty small">No accounts waiting.</div><% } %>
+    <% for (const p of pending.slice(0, 4)) { %><div class="item"><div class="grow"><b style="font-size:16px"><%= p.d.name || p.full_name %></b><div class="meta"><%= p.role === 'doctor' ? 'Medical license submitted · ' + (p.d.extra ? p.d.extra.specialty : '') : p.role === 'center' ? 'Trade license submitted' : p.role === 'ambulance' ? 'Vehicle registration submitted' : 'Drug license submitted · phone verified' %></div></div>
+      <a class="btn sm" href="/admin/verifications?id=<%= p.id %>">Verify</a><%- pill(p.d.kind || p.role, 'amber') %></div><% } %>
+  </section>
+  <section class="card"><h2 style="margin-bottom:16px">Recent access log</h2>
+    <div class="timeline"><% for (const l of log) { %><div class="tl"><span class="dot <%= l.action.includes('upload') ? 'green' : l.action.includes('request') ? 'orange' : 'blue' %>"></span><b style="font-size:15.5px"><%= l.who %> <%= l.text %> <%= l.what %></b><span><%= fmtDateTime(l.created_at) %><%= l.patient_name ? ' · ' + l.patient_name : '' %></span></div><% } %></div>
+    <% if (!log.length) { %><div class="empty small">No record access yet.</div><% } %></section>
+</div>
+<%- include('../partials/bottom') %>

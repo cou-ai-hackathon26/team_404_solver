@@ -1,0 +1,23 @@
+<%- include('../partials/top') %>
+<section class="hero compact med" style="background:linear-gradient(110deg,#7c3aed 0%,#4f46e5 50%,#0ea5e9 100%)">
+  <div><span class="chip"><%- icon('cart', 14) %> Medicine shop</span><h1>Order medicines</h1><p>Add medicines to your cart. We find the pharmacy that has all of them, closest to you, with the best discount.</p></div>
+  <a class="cart-fab" href="/patient/shop/cart"><%- icon('cart', 26) %><b><%= count %></b><span>View cart</span></a>
+  <%- include('../partials/stickers', { set: 'pharmacy' }) %>
+</section>
+<form method="get" class="row mt"><input name="q" value="<%= q %>" placeholder="Search medicine or brand (e.g. Napa, Paracetamol)" style="margin:0;max-width:420px"><button class="btn ghost">Search</button><% if (q) { %><a href="/patient/shop">Clear</a><% } %>
+  <a class="btn ghost" style="margin-left:auto" href="/patient/order"><%- icon('upload', 16) %> Upload a prescription instead</a></form>
+<div class="grid g3 mt">
+  <% meds.forEach((m, i) => { const inCart = cart[m.id]; %>
+    <article class="card med-card" id="m<%= m.id %>" style="--d:<%= Math.min(i, 12) * 40 %>ms">
+      <div class="row nowrap"><span class="tile <%= m.rx_required ? 't-orange' : 't-teal' %>"><%- icon(m.form === 'Inhaler' ? 'activity' : m.form === 'Sachet' ? 'drop' : 'pill', 22) %></span>
+        <div class="grow"><h3><%= m.name %> <%= m.strength %></h3><span class="muted small"><%= m.brand %> · <%= m.form %></span></div><%- m.rx_required ? pill('Rx', 'amber') : pill('OTC', 'green') %></div>
+      <div class="row between mt-s"><div><% if (m.shops) { %><b class="price"><%= money(m.min_price) %></b><span class="muted small"> / unit<%= m.max_price > m.min_price ? ' – ' + money(m.max_price) : '' %></span>
+        <div class="muted small">10 pcs from <%= money(m.min_price * 10) %> · <%= m.shops %> pharmac<%= m.shops === 1 ? 'y' : 'ies' %><%= m.best_discount ? ' · up to ' + m.best_discount + '% off' : '' %></div><% } else { %><span class="muted">Out of stock everywhere</span><% } %></div></div>
+      <form method="post" action="/patient/shop/cart" class="row nowrap mt-s"><%- include('../partials/csrf') %><input type="hidden" name="medicine_id" value="<%= m.id %>"><input type="hidden" name="q" value="<%= q %>">
+        <div class="qty"><button type="button" data-qty="-1">−</button><input type="number" name="qty" value="<%= inCart ? 10 : 10 %>" min="1" max="500"><button type="button" data-qty="1">+</button></div>
+        <button class="btn grow" <%= m.shops ? '' : 'disabled' %>><%- icon('cart', 16) %> <%= inCart ? 'Add more (' + inCart + ')' : 'Add to cart' %></button></form>
+    </article>
+  <% }) %>
+</div>
+<% if (!meds.length) { %><div class="empty mt">No medicine matches “<%= q %>”.</div><% } %>
+<%- include('../partials/bottom') %>

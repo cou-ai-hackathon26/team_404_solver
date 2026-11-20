@@ -1,0 +1,58 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Medicine reminders</h1><p>At each dose time you get a device notification and/or a voice saying “এখন আপনার ওষুধ খাওয়ার সময় হয়েছে”. Keep MediConnect open in a browser tab.</p></div>
+  <%- adherence.pct == null ? pill('No history yet') : pill(adherence.pct + '% taken this week', adherence.pct >= 80 ? 'green' : 'amber') %></div>
+<div class="grid g-main">
+  <section class="card"><div class="card-h"><h2>Today</h2><%- pill(doses.filter(d => d.status === 'taken').length + ' of ' + doses.length + ' taken') %></div>
+    <% if (!doses.length) { %><div class="empty">No doses today. Create reminders from a prescription.</div><% } %>
+    <% for (const d of doses) { const late = d.status === 'due' && new Date(d.due_at) < new Date(); %>
+      <div class="item" style="<%= late ? 'border-color:#fca5a5' : '' %>"><span class="tile <%= d.status === 'taken' ? 't-teal' : late ? 't-red' : 't-purple' %>"><%- icon(d.status === 'taken' ? 'check' : 'alarm', 22) %></span>
+        <div class="grow"><b style="font-size:16px"><%= d.medicine_name %></b><div class="meta"><%= fmtTime(d.due_at) %> · <%= d.dose %><%= d.pills_left != null ? ' · ' + d.pills_left + ' left' : '' %><%= late ? ' · overdue' : '' %></div></div>
+        <% if (d.status === 'due') { %>
+          <form method="post" action="/patient/reminders/dose/<%= d.id %>/taken"><%- include('../partials/csrf') %><button class="btn sm green">Taken</button></form>
+          <form method="post" action="/patient/reminders/dose/<%= d.id %>/skipped"><%- include('../partials/csrf') %><button class="btn ghost sm">Skip</button></form>
+        <% } else { %><%- badge(d.status) %><% } %></div>
+    <% } %>
+  </section>
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:6px">Adherence, last 7 days</h2><p class="muted small">Doses taken out of doses due</p>
+      <%- bars(week.map(w => w.total ? Math.round(w.taken / w.total * 100) : 0), week.map(w => w.label)) %>
+      <p class="muted small">Text reminders roughly double the odds of taking medicine as prescribed (JAMA Internal Medicine, 2016).</p></section>
+  </div>
+</div>
+<div class="grid g2 mt">
+  <section class="card"><h2 style="margin-bottom:14px">Create from a prescription</h2>
+    <% if (!prescriptions.length) { %><div class="empty small">No prescriptions yet.</div><% } %>
+    <% for (const p of prescriptions) { %><form class="item" method="post" action="/patient/reminders/from-rx"><%- include('../partials/csrf') %><input type="hidden" name="prescription_id" value="<%= p.id %>">
+      <div class="grow"><b><%= p.doctor_name || 'Uploaded prescription' %></b><div class="meta"><%= shortDate(p.created_at) %></div></div>
+      <% if (p.has) { %><%- pill('Reminders on', 'green') %><% } else { %><button class="btn sm"><%- icon('alarm', 16) %>Create reminders</button><% } %></form><% } %>
+  </section>
+  <form class="card" id="add" method="post" action="/patient/reminders/custom" data-reminder-form><%- include('../partials/csrf') %>
+    <h2>Add a reminder</h2><p class="muted small">Type your medicine, dose and times. Choose how you want to be reminded.</p>
+    <div class="fgrid mt-s"><label class="f">Medicine name<input name="medicine_name" required placeholder="e.g. Napa 500 mg"></label><label class="f">Dose<input name="dose" placeholder="1 tablet"></label>
+      <label class="f">Times a day<select name="per_day" data-per-day><% for (let n = 1; n <= 4; n++) { %><option value="<%= n %>" <%= n === 2 ? 'selected' : '' %>><%= n %> time<%= n > 1 ? 's' : '' %> a day</option><% } %></select></label>
+      <label class="f">For how many days<input type="number" name="days" value="7" min="1" max="365"></label></div>
+    <div class="times-row"><% ['08:00', '21:00', '14:00', '17:00'].forEach((t, i) => { %><label class="f" data-time-slot="<%= i + 1 %>">Dose <%= i + 1 %><input type="time" name="times" value="<%= t %>"></label><% }) %></div>
+    <label class="f">Start date<input type="date" name="start_date" value="<%= todayInput() %>" min="<%= todayInput() %>"></label>
+    <b class="small">Remind me with</b>
+    <div class="grid g2 mt-s choice">
+      <label class="choice-card"><input type="checkbox" name="notify_push" value="1" checked><span><%- icon('bell', 22) %><b>Notification</b><small>Pop-up on this device</small></span></label>
+      <label class="choice-card"><input type="checkbox" name="notify_voice" value="1" checked><span><%- icon('volume', 22) %><b>Voice</b><small>Speaks out at dose time</small></span></label>
+    </div>
+    <div class="row mt-s"><button class="btn"><%- icon('alarm', 17) %> Save reminder</button><button type="button" class="btn ghost" data-test-voice><%- icon('volume', 17) %> Test voice</button><button type="button" class="btn ghost" data-ask-notify><%- icon('bell', 17) %> Allow notifications</button></div>
+  </form>
+</div>
+<div class="mt">
+  <section class="card"><h2 style="margin-bottom:14px">All reminders</h2>
+    <% if (!list.length) { %><div class="empty small">No reminders yet.</div><% } %>
+    <% for (const r of list) { const low = r.active && r.pills_left != null && r.pills_left <= 3; %>
+      <div class="item"><div class="grow"><b><%= r.medicine_name %></b><div class="meta"><%= r.dose %> · <%= r.times.split(',').length %>×/day: <%= r.times.split(',').map(t => fmtTime('2000-01-01T' + t + ':00')).join(', ') %> · until <%= shortDate(r.end_date) %></div>
+        <% if (r.active) { %><form method="post" action="/patient/reminders/<%= r.id %>/alerts" class="row mt-s alert-toggles"><%- include('../partials/csrf') %>
+          <label class="mini-check"><input type="checkbox" name="notify_push" value="1" <%= r.notify_push ? 'checked' : '' %> data-autosubmit><%- icon('bell', 14) %> Notification</label>
+          <label class="mini-check"><input type="checkbox" name="notify_voice" value="1" <%= r.notify_voice ? 'checked' : '' %> data-autosubmit><%- icon('volume', 14) %> Voice</label></form><% } %>
+        <% if (r.pills_left != null) { %><div class="bar mt-s" style="max-width:220px"><i class="<%= low ? 'low' : '' %>" style="width:<%= Math.min(100, r.pills_left * 5) %>%"></i></div><% } %></div>
+        <% if (low) { %><form method="post" action="/patient/reminders/<%= r.id %>/refill"><%- include('../partials/csrf') %><button class="btn sm">Refill</button></form><% } %>
+        <% if (r.active) { %><form method="post" action="/patient/reminders/<%= r.id %>/stop" data-confirm="Stop this reminder?"><%- include('../partials/csrf') %><button class="btn ghost sm">Stop</button></form><% } else { %><%- pill('Finished', 'gray') %><% } %></div>
+    <% } %>
+  </section>
+</div>
+<%- include('../partials/bottom') %>

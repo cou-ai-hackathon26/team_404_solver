@@ -1,0 +1,25 @@
+<%- include('../partials/auth-top', { wide: true }) %>
+<div class="auth-card wide">
+  <span class="steps-mini"><span class="on">1 Account type</span><span>2 Your details</span><span>3 Verify once</span></span>
+  <h1>Create your account</h1>
+  <p class="sub">Choose what you are joining as. The next page asks only for what that account needs.</p>
+  <div class="role-grid">
+    <% const CARDS = [
+      ['patient', 'user', 't-blue', 'Patient', 'Find doctors, book tests, order medicine and track your health', 'Email verification'],
+      ['doctor', 'stethoscope', 't-teal', 'Doctor', 'Get appointment requests, write prescriptions and chat with patients', 'Email + admin review'],
+      ['center', 'flask', 't-orange', 'Diagnostic Center', 'Receive test bookings and upload reports to patients', 'Email + admin review'],
+      ['pharmacy', 'pill', 't-purple', 'Medical Shop', 'Sell medicines, manage live stock and deliver orders', 'Phone SMS + admin review'],
+      ['ambulance', 'ambulance', 't-red', 'Ambulance', 'Go online, show your live location and take emergency calls', 'Phone SMS + admin review'],
+    ]; %>
+    <% CARDS.forEach(([role, ic, tile, name, text, verify], i) => { %>
+      <a class="role-card" href="/register/<%= role %>" style="--d:<%= i * 70 %>ms">
+        <span class="tile <%= tile %> xl"><%- icon(ic, 30) %></span>
+        <b><%= name %></b><span class="muted small"><%= text %></span>
+        <span class="role-verify"><%- icon('shield', 14) %> <%= verify %></span>
+        <span class="role-go"><%- icon('send', 16) %></span>
+      </a>
+    <% }) %>
+  </div>
+  <p class="muted" style="text-align:center;margin-top:20px">Already registered? <a href="/login" style="text-decoration:underline;font-weight:600">Log in</a></p>
+</div>
+<%- include('../partials/auth-bottom') %>

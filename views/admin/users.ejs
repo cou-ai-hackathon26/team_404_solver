@@ -1,0 +1,11 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1><%= title %></h1><p><%= users.length %> account<%= users.length === 1 ? '' : 's' %><%= q ? ' matching “' + q + '”' : '' %></p></div>
+  <form method="get" class="row nowrap"><% if (role) { %><input type="hidden" name="role" value="<%= role %>"><% } %><input name="q" value="<%= q %>" placeholder="Name or email" style="margin:0;min-width:240px"><button class="btn ghost sm">Search</button></form></div>
+<section class="card"><div class="tbl-wrap"><table class="tbl"><tr><th>Name</th><% if (!role) { %><th>Role</th><% } %><th>Email</th><th>Details</th><th>Joined</th><th>Status</th><th></th></tr>
+  <% for (const u of users) { %><tr><td><div class="row nowrap"><%- avatar(u.d && u.d.name || u.full_name, 'sm', u.id) %><b><%= u.d && u.d.name || u.full_name %></b></div></td><% if (!role) { %><td><%= u.role %></td><% } %><td><%= u.email %></td><td class="muted small"><%= u.d ? u.d.line : u.phone || '' %>
+      <% if (u.role === 'doctor' && u.d) { %><form method="post" action="/admin/doctors/<%= u.id %>/specialty" class="row nowrap mt-s"><%- include('../partials/csrf') %><select name="specialty" style="margin:0;padding:4px 8px;font-size:13px" data-autosubmit><% for (const sp of SPECIALTIES) { %><option <%= u.d.extra.specialty === sp ? 'selected' : '' %>><%= sp %></option><% } %></select></form><% } %></td><td><%= shortDate(u.created_at) %></td>
+    <td><%- u.status === 'pending' ? pill(u.email_verified || u.phone_verified ? 'Awaiting review' : 'Not verified yet', 'amber') : badge(u.status) %></td>
+    <td><% if (u.role !== 'admin') { %><% if (u.status === 'pending' && (u.email_verified || u.phone_verified)) { %><a class="btn sm" href="/admin/verifications?id=<%= u.id %>">Review</a>
+      <% } else if (u.status === 'suspended') { %><form method="post" action="/admin/users/<%= u.id %>/activate"><%- include('../partials/csrf') %><button class="btn ghost sm">Activate</button></form>
+      <% } else if (u.status === 'active') { %><form method="post" action="/admin/users/<%= u.id %>/suspend" data-confirm="Suspend this account? They will be signed out."><%- include('../partials/csrf') %><button class="btn danger sm">Suspend</button></form><% } %><% } %></td></tr><% } %></table></div></section>
+<%- include('../partials/bottom') %>

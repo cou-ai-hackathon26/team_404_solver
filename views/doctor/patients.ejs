@@ -1,0 +1,36 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>My patients</h1><p>Patients you have consulted. Reports open only with their approval.</p></div><%- pill(cards[0].value + ' active') %></div>
+<div class="grid g4"><% for (const s of cards) { %><%- include('../partials/stat', { s }) %><% } %></div>
+<div class="grid g-main mt">
+  <section class="card">
+    <div class="row between"><form method="get" class="grow" style="max-width:300px"><input name="q" value="<%= q %>" placeholder="Search" style="margin:0"></form>
+      <div class="filter"><a href="?f=all" class="<%= f === 'all' ? 'on' : '' %>">All</a><a href="?f=followup" class="<%= f === 'followup' ? 'on' : '' %>">Follow-up</a><a href="?f=approved" class="<%= f === 'approved' ? 'on' : '' %>">Access approved</a></div></div>
+    <div class="tbl-wrap mt"><table class="tbl"><tr><th>Patient</th><th>Age</th><th>Condition</th><th>Last visit</th><th>Report access</th><th>Action</th></tr>
+      <% for (const p of patients) { %><tr style="<%= sel && sel.id === p.id ? 'background:#f5f7ff' : '' %>">
+        <td><div class="row nowrap"><%- avatar(p.full_name, 'sm', p.id) %><b><%= p.full_name %></b></div></td><td><%= p.age ?? '—' %></td><td><%= (p.reason || '').slice(0, 28) %></td><td><%= p.last_visit ? shortDate(p.last_visit) : '—' %></td>
+        <td><%- p.access ? pill('Approved', 'green') : p.req_status === 'pending' ? pill('Pending', 'amber') : pill('Not requested', 'blue') %></td>
+        <td><a class="btn ghost sm" href="?id=<%= p.id %>&f=<%= f %>"><%= p.access ? 'View' : 'Open' %></a></td></tr><% } %></table></div>
+    <% if (!patients.length) { %><div class="empty small mt-s">No patients match.</div><% } %>
+  </section>
+  <div class="stack">
+    <% if (sel) { %>
+    <section class="card"><div class="row nowrap"><%- avatar(sel.full_name, 'md', sel.id) %><div><h3 style="font-size:17px"><%= sel.full_name %></h3><span class="muted small"><%= sel.age ?? '—' %> · <%= sel.gender || '' %> · <%= sel.blood_group || '' %></span></div></div>
+      <div class="timeline mt"><% for (const j of sel.journey) { %><div class="tl"><span class="dot <%= j.k === 'consult' ? 'blue' : j.k === 'test' ? 'orange' : 'green' %>"></span><b style="font-size:15px"><%= j.k === 'consult' ? 'Consultation' : j.k === 'test' ? 'Tests prescribed' : 'Reports shared' %></b><span class="small"><%= shortDate(j.t) %> · <%= String(j.d || '').slice(0, 40) %></span></div><% } %></div></section>
+    <section class="card"><h2 style="margin-bottom:12px">Reports</h2>
+      <% if (!sel.grants.length) { %>
+        <div class="note blue"><%- icon('shield', 18) %> Reports are private until <%= sel.full_name.split(' ')[0] %> approves your request.</div>
+        <% if (sel.requests[0] && sel.requests[0].status === 'pending') { %><p class="muted small mt-s">Request sent <%= ago(sel.requests[0].created_at) %>. Waiting for the patient.</p>
+        <% } else { %><form method="post" action="/doctor/patients/<%= sel.id %>/request-access" class="mt-s"><%- include('../partials/csrf') %>
+          <input name="reason" placeholder="Reason shown to the patient" required>
+          <div class="row mt-s"><select name="hours" style="margin:0;max-width:150px"><% for (const h of [24, 48, 72, 168]) { %><option value="<%= h %>" <%= h === defaultHours ? 'selected' : '' %>><%= h < 168 ? h + ' hours' : '7 days' %></option><% } %></select><button class="btn sm">Request access</button></div></form><% } %>
+      <% } else { %>
+        <% for (const r of sel.reports) { %><a class="item" href="/files/report/<%= r.id %>" target="_blank"><span class="tile sm t-teal"><%- icon('file', 18) %></span><div class="grow"><b><%= r.test_name %></b><div class="meta"><%= r.center_name %> · <%= shortDate(r.test_date) %></div></div><%- icon('eye', 18) %></a><% } %>
+        <% if (!sel.reports.length) { %><div class="empty small">No reports in your access yet.</div><% } %>
+        <p class="muted small mt-s">Access expires <%= friendly(sel.grants.map(g => g.expires_at).sort().at(-1)) %>. Every view is in the patient's audit log.</p>
+        <% if (sel.vitals) { const ks = Object.values(sel.vitals.kinds).filter(k => k.last); if (ks.length) { %><h3 class="mt">Shared health status</h3><% for (const k of ks) { %><div class="toggle-row"><span><%= k.name %></span><span><%- badge(k.status.level) %></span></div><% } } } %>
+      <% } %></section>
+    <% } %>
+    <section class="card soft"><h3>Access is time-limited</h3><p class="muted small mt-s">Every view of a report is recorded in the audit log.</p></section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

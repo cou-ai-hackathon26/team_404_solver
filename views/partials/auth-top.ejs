@@ -1,0 +1,18 @@
+<%- include('head') %>
+<body>
+<div class="auth">
+  <section class="auth-art">
+    <a class="brand" href="/" style="padding:0;font-size:24px"><span class="logo"><%- icon('heart', 22) %></span> MediConnect</a>
+    <div>
+      <h1><%- typeof artTitle !== 'undefined' ? artTitle : 'One connected platform for every step of your care.' %></h1>
+      <p><%= typeof artText !== 'undefined' ? artText : 'Find the right doctor, manage diagnostic reports and order medicines from one secure portal.' %></p>
+    </div>
+    <div>
+      <% const feats = typeof artFeatures !== 'undefined' ? artFeatures : [['heart','AI doctor matching','Verified specialists for your symptoms'],['shield','You control your records','Access needs your approval and is logged'],['pill','Medicines delivered','Compare nearby pharmacies and order']]; %>
+      <% for (const [ic, t, s] of feats) { %><div class="feature"><i><%- icon(ic, 22) %></i><div><b><%= t %></b><span><%= s %></span></div></div><% } %>
+    </div>
+  </section>
+  <section class="auth-form">
+    <div style="width:100%;max-width:<%= typeof wide !== 'undefined' ? '640px' : '480px' %>">
+      <% for (const f of flash) { %><div class="alert <%= f.type %>"><%= f.msg %></div><% } %>
+      <% if (typeof errors !== 'undefined' && errors && errors.length) { %><div class="alert error"><ul><% for (const e of errors) { %><li><%= e %></li><% } %></ul></div><% } %>

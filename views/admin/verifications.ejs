@@ -1,0 +1,33 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Verification review</h1><p>Approve only after checking documents.</p></div><%- pill(queue.length + ' pending', 'amber') %></div>
+<% if (unverified) { %><p class="muted small" style="margin:-10px 0 14px"><%= unverified %> more registration<%= unverified === 1 ? ' has' : 's have' %> not verified their email yet.</p><% } %>
+<div class="grid g-main-r">
+  <section class="card"><h2 style="margin-bottom:14px">Queue</h2>
+    <% if (!queue.length) { %><div class="empty small">Nothing to review.</div><% } %>
+    <% for (const u of queue) { %><a class="item <%= sel && sel.id === u.id ? 'sel' : '' %>" href="?id=<%= u.id %>"><div class="grow"><b><%= u.d.name || u.full_name %></b><div class="meta"><%= u.d.kind %><%= u.role === 'doctor' && u.d.extra ? ' · ' + u.d.extra.specialty : '' %></div></div><%- pill(u.d.kind || u.role, 'amber') %></a><% } %></section>
+  <% if (sel) { %>
+  <div class="stack">
+    <section class="card"><div class="row between nowrap"><div class="row nowrap"><%- avatar(sel.d.name || sel.full_name, 'lg', sel.id) %><div><h2 style="font-size:22px"><%= sel.d.name || sel.full_name %></h2><span class="muted"><%= sel.d.line %> · Applied <%= shortDate(sel.created_at) %></span></div></div><%- pill(sel.review_note ? 'Info requested' : 'Awaiting review', 'amber') %></div>
+      <div class="grid g3 mt" style="gap:10px">
+        <div class="item" style="margin:0"><div><span class="muted small">Contact</span><div><b><%= sel.full_name %></b></div><div class="meta" style="overflow-wrap:anywhere"><%= sel.email %></div><div class="meta"><%= sel.phone %></div></div></div>
+        <div class="item" style="margin:0"><div><span class="muted small">License no.</span><div><b><%= sel.d.license || '—' %></b></div></div></div>
+        <div class="item" style="margin:0"><div><span class="muted small"><%= sel.role === 'doctor' ? 'Qualifications' : 'Address' %></span><div><b><%= sel.role === 'doctor' ? (sel.d.extra.qualifications || '—') : (sel.d.extra.address || '—') %></b></div><div class="meta"><%= sel.role === 'pharmacy' || sel.role === 'ambulance' ? (sel.phone_verified ? 'Phone verified by SMS' : 'Phone not verified') : (sel.email_verified ? 'Email verified' : '') %></div></div></div></div>
+      <% if (sel.review_note) { %><div class="note blue mt-s"><%- icon('message', 18) %> Last note: <%= sel.review_note %></div><% } %>
+      <h3 class="mt">Submitted documents</h3>
+      <% if (!docs.length) { %><div class="empty small mt-s">No documents uploaded.</div><% } %>
+      <% for (const d of docs) { %><div class="item mt-s"><span class="tile t-blue"><%- icon('file', 22) %></span><div class="grow"><b><%= d.kind %></b><div class="meta"><%= d.mime_type === 'application/pdf' ? 'PDF' : 'Image' %> · <%= d.size >= 1048576 ? (d.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(d.size / 1024)) + ' KB' %></div></div><a class="btn ghost sm" href="/files/document/<%= d.id %>" target="_blank">View</a></div><% } %>
+    </section>
+    <form class="card" method="post" action="/admin/verifications/<%= sel.id %>/approve"><%- include('../partials/csrf') %><h2 style="margin-bottom:12px">Checklist</h2>
+      <% if (sel.role === 'doctor') { %><label class="f">Specialty (patients find this doctor by it)<select name="specialty"><% for (const sp of SPECIALTIES) { %><option <%= sel.d.extra.specialty === sp ? 'selected' : '' %>><%= sp %></option><% } %></select></label><% } %>
+      <% for (const [k, t] of [['identity','Identity matches submitted documents'],['license', { doctor: 'Medical license (BMDC) is valid', center: 'Trade license is valid', pharmacy: 'Drug license is valid', ambulance: 'Vehicle registration and fitness are valid' }[sel.role]],['details', sel.role === 'doctor' ? 'Specialty and experience match the profile' : 'Name and address match the license']]) { %>
+        <label class="check" style="margin-bottom:10px"><input type="checkbox" name="<%= k %>" value="1" style="width:18px;height:18px"> <%= t %></label><% } %>
+      <label class="f mt-s">Note to applicant (optional)<textarea name="note" style="min-height:80px"></textarea></label>
+      <div class="row"><button class="btn lg">Approve and verify</button>
+        <button class="btn ghost" formaction="/admin/verifications/<%= sel.id %>/info">Request more info</button>
+        <button class="btn danger" formaction="/admin/verifications/<%= sel.id %>/reject" data-confirm-click="Reject this registration?">Reject</button></div>
+      <p class="muted small mt-s">Verified providers appear in patient recommendations. This action is logged.</p>
+    </form>
+  </div>
+  <% } %>
+</div>
+<%- include('../partials/bottom') %>

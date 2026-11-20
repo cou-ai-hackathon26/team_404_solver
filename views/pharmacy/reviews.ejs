@@ -1,0 +1,18 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Ratings and reviews</h1><p>Only patients with a delivered order can review. Good service raises your place in patient comparisons.</p></div><% if (position) { %><%- pill('#' + position + ' of ' + of + ' nearby pharmacies', 'green') %><% } %></div>
+<div class="grid g-main-r">
+  <section class="card soft"><h2>Overall</h2>
+    <div class="row mt"><span style="font-size:48px;font-weight:800;color:var(--ink)"><%= rating.average ? rating.average.toFixed(1) : '—' %></span><div><%- stars(rating.average || 0) %><div class="muted"><%= rating.count %> verified reviews</div></div></div>
+    <% for (const [k, t] of Object.entries(ASPECTS)) { const v = rating.aspects[k]; %><div class="mt"><div class="row between"><b><%= t %></b><span class="muted"><%= v ? v.toFixed(1) : '—' %></span></div><div class="bar mt-s"><i style="width:<%= (v || 0) * 20 %>%"></i></div></div><% } %>
+    <p class="muted small mt">Ranking uses a weighted average, so a shop with one 5-star review cannot jump above shops with many good reviews.</p></section>
+  <section class="card"><h2 style="margin-bottom:14px">Reviews</h2>
+    <% if (!list.length) { %><div class="empty small">No reviews yet.</div><% } %>
+    <% for (const r of list) { %><div class="item" style="display:block">
+      <div class="row between"><div class="row nowrap"><%- avatar(r.full_name, 'sm', r.patient_id) %><div><b><%= r.full_name.split(' ')[0] %> <%= r.full_name.split(' ')[1] ? r.full_name.split(' ')[1][0] + '.' : '' %></b><div class="meta"><%= shortDate(r.created_at) %> · order <%= code(r.order_id) %></div></div></div><div class="row"><%- stars(r.overall) %><% if (r.hidden) { %><%- pill('Held for moderation', 'red') %><% } %></div></div>
+      <% if (r.comment) { %><p class="mt-s"><%= r.comment %></p><% } %>
+      <div class="chips mt-s"><% for (const [k, t] of Object.entries(ASPECTS)) { %><span class="badge gray"><%= t %> <%= r[k] %>/5</span><% } %></div>
+      <% if (r.reply) { %><div class="note blue mt-s"><%- icon('message', 18) %> <span><b>Your reply:</b> <%= r.reply %></span></div>
+      <% } else { %><form method="post" action="/pharmacy/reviews/<%= r.id %>/reply" class="row nowrap mt-s"><%- include('../partials/csrf') %><input name="reply" placeholder="Reply publicly" required style="margin:0"><button class="btn ghost sm">Reply</button></form><% } %>
+    </div><% } %></section>
+</div>
+<%- include('../partials/bottom') %>

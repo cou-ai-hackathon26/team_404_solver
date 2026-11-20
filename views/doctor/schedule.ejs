@@ -1,0 +1,48 @@
+<%- include('../partials/top') %>
+<form method="post" action="/doctor/schedule" id="sched"><%- include('../partials/csrf') %></form>
+<div class="page-h"><div><h1>Schedule and availability</h1><p>Patients only see times you open. Requests are matched to this schedule.</p></div><button class="btn" form="sched">Save schedule</button></div>
+<div class="grid g-main">
+  <section class="card"><h2 style="margin-bottom:14px">Weekly hours</h2>
+    <% for (const h of hours) { %>
+      <div class="item"><label class="switch"><input type="checkbox" name="on_<%= h.weekday %>" value="1" form="sched" <%= h.enabled ? 'checked' : '' %>><span></span></label>
+        <b style="width:110px"><%= WEEKDAYS[h.weekday] %></b>
+        <input type="time" name="start_<%= h.weekday %>" value="<%= h.start_time %>" form="sched" style="margin:0;max-width:150px" aria-label="<%= WEEKDAYS[h.weekday] %> start">
+        <span class="muted">to</span>
+        <input type="time" name="end_<%= h.weekday %>" value="<%= h.end_time %>" form="sched" style="margin:0;max-width:150px" aria-label="<%= WEEKDAYS[h.weekday] %> end">
+        <span class="grow"></span><%- h.enabled ? pill('Open', 'green') : pill('Off') %></div>
+    <% } %>
+  </section>
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:14px">Consultation settings</h2>
+      <div class="fgrid">
+        <label class="f">Slot length<select name="slot_minutes" form="sched"><% for (const v of [15, 20, 30, 45, 60]) { %><option value="<%= v %>" <%= profile.slot_minutes === v ? 'selected' : '' %>><%= v %> minutes</option><% } %></select></label>
+        <label class="f">Buffer between visits<select name="buffer_minutes" form="sched"><% for (const v of [0, 5, 10, 15]) { %><option value="<%= v %>" <%= profile.buffer_minutes === v ? 'selected' : '' %>><%= v %> minutes</option><% } %></select></label>
+        <label class="f">Fee (BDT)<input type="number" name="fee" min="0" value="<%= profile.fee %>" form="sched"></label>
+        <label class="f">Max per day<input type="number" name="max_per_day" min="1" max="60" value="<%= profile.max_per_day %>" form="sched"></label>
+      </div>
+      <div class="grid g2" style="gap:10px"><label class="item" style="margin:0;cursor:pointer"><input type="checkbox" name="in_person" value="1" form="sched" <%= profile.in_person ? 'checked' : '' %>><b>In person</b></label><label class="item" style="margin:0;cursor:pointer"><input type="checkbox" name="online" value="1" form="sched" <%= profile.online ? 'checked' : '' %>><b>Online</b></label></div>
+    </section>
+    <section class="card soft"><div class="card-h"><h2><%= new Date(day + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long' }) %> slots</h2><%- pill(slots.filter(s => s.state === 'open').length + ' open') %></div>
+      <div class="days" style="margin-bottom:12px"><% for (const d of strip) { %><a class="day <%= d.day === day ? 'on' : '' %> <%= d.open ? '' : 'closed' %>" href="?day=<%= d.day %>" style="padding:6px 2px"><small><%= d.dow %></small><b style="font-size:16px"><%= d.num %></b></a><% } %></div>
+      <% if (!slots.length) { %><div class="empty small"><%= off === 'closed' ? 'Closed this day.' : off %></div><% } %>
+      <div class="slots s2"><% for (const s of slots) { %><div class="slot"><span style="<%= s.state === 'booked' ? 'background:#eef2ff;color:#4338ca' : s.state === 'past' ? 'background:#f1f5f9;color:#94a3b8' : '' %>"><%= s.label %><%= s.state === 'booked' ? ' · booked' : '' %></span></div><% } %></div>
+    </section>
+  </div>
+</div>
+<div class="grid g-main-r mt">
+  <section class="card"><div class="card-h"><h2>Time off</h2></div>
+    <% if (!timeOff.length) { %><div class="empty small">No time off planned.</div><% } %>
+    <% for (const t of timeOff) { %><div class="item"><div class="grow"><b><%= t.start_date === t.end_date ? fmtDate(t.start_date) : shortDate(t.start_date) + ' to ' + fmtDate(t.end_date) %></b><div class="meta"><%= t.reason %></div></div><%- pill('Blocked', 'amber') %>
+      <form method="post" action="/doctor/schedule/time-off/<%= t.id %>/delete"><%- include('../partials/csrf') %><button class="link small" aria-label="Remove"><%- icon('x', 14) %></button></form></div><% } %>
+    <form method="post" action="/doctor/schedule/time-off" class="mt"><%- include('../partials/csrf') %>
+      <div class="fgrid"><label class="f">From<input type="date" name="start_date" required min="<%= todayInput() %>"></label><label class="f">To<input type="date" name="end_date" min="<%= todayInput() %>"></label></div>
+      <label class="f">Reason<input name="reason" placeholder="e.g. Medical conference"></label><button class="btn ghost sm"><%- icon('plus', 16) %>Add</button></form>
+  </section>
+  <div class="stack">
+    <section class="card soft"><div class="row nowrap"><span class="tile t-blue"><%- icon('calendar', 22) %></span><p>When you propose a time, you can only choose from open slots, so double booking cannot happen.</p></div></section>
+    <section class="card"><h2 style="margin-bottom:12px">Booked on <%= shortDate(day) %></h2>
+      <% if (!booked.length) { %><div class="empty small">Nothing booked.</div><% } %>
+      <div class="timeline"><% for (const a of booked) { %><div class="tl"><span class="dot <%= a.status === 'completed' ? 'green' : a.status === 'proposed' ? 'orange' : 'blue' %>"></span><b style="font-size:15px"><a href="/doctor/appointments/<%= a.id %>" style="color:inherit"><%= fmtTime(a.proposed_time) %> · <%= a.patient_name %></a></b><span class="small"><%= label(a.status) %></span></div><% } %></div></section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

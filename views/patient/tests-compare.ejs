@@ -1,0 +1,43 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Search tests and compare centers</h1><p>Select all your tests at once. We find diagnostic centers that do them, nearest first, with total price and discount.</p></div><a class="btn ghost" href="/patient/tests">My tests</a></div>
+<form method="get" class="card" id="test-pick">
+  <div class="row between"><h2>1. Choose your tests</h2><div class="row"><input data-filter-list="#test-list" placeholder="Search tests…" style="margin:0;max-width:240px">
+    <% if (prescribed.length) { %><a class="btn ghost sm" href="?prescribed=1">Use my prescribed tests (<%= prescribed.length %>)</a><% } %></div></div>
+  <div class="test-pick mt-s" id="test-list">
+    <% let lastCat = ''; for (const t of catalog) { %>
+      <label class="test-chip <%= ids.includes(t.id) ? 'on' : '' %>" data-name="<%= t.name.toLowerCase() %>"><input type="checkbox" name="t" value="<%= t.id %>" <%= ids.includes(t.id) ? 'checked' : '' %>><span><%= t.name %></span><small><%= t.category %></small></label>
+    <% } %>
+  </div>
+  <div class="row between mt"><span class="muted"><b data-picked><%= ids.length %></b> test(s) selected</span>
+    <div class="row"><span class="muted small">Sort by</span><div class="seg"><% for (const [k, t] of [['nearest', 'Nearest'], ['cheapest', 'Lowest price'], ['discount', 'Biggest discount']]) { %><label><input type="radio" name="sort" value="<%= k %>" <%= sort === k ? 'checked' : '' %>><span><%= t %></span></label><% } %></div>
+      <button class="btn"><%- icon('search', 17) %> Find centers</button></div></div>
+</form>
+
+<% if (ids.length) { %>
+  <% if (best.nearest) { %>
+  <div class="grid g3 mt">
+    <div class="best-card blue"><span><%- icon('pin', 18) %> Nearest with all tests</span><b><%= best.nearest.name %></b><small><%= km(best.nearest.distance) %> · <%= money(best.nearest.final) %></small></div>
+    <div class="best-card green"><span><%- icon('wallet', 18) %> Lowest total price</span><b><%= best.cheapest.name %></b><small><%= money(best.cheapest.final) %><%= best.cheapest.saved ? ' · save ' + money(best.cheapest.saved) : '' %></small></div>
+    <div class="best-card purple"><span><%- icon('tag', 18) %> Biggest discount</span><b><%= best.discount.name %></b><small><%= best.discount.pct %>% off · <%= money(best.discount.final) %></small></div>
+  </div>
+  <% } %>
+  <div class="grid g-main mt">
+    <div class="stack">
+      <% if (!list.length) { %><div class="empty">No center offers these tests yet.</div><% } %>
+      <% list.forEach((c, i) => { %>
+        <article class="card center-cmp <%= c.all ? '' : 'partial' %>" style="--d:<%= i * 60 %>ms">
+          <div class="row between nowrap"><div class="row nowrap"><span class="rank"><%= i + 1 %></span><div><h3 style="font-size:18px"><%= c.name %></h3><span class="muted small"><%= c.address %> · <%= km(c.distance) %></span></div></div>
+            <div style="text-align:right"><% if (c.saved) { %><s class="muted small"><%= money(c.regular) %></s><% } %><div class="price-big"><%= money(c.final) %></div><% if (c.pct) { %><span class="badge green"><%= c.pct %>% off · save <%= money(c.saved) %></span><% } %></div></div>
+          <div class="chips mt-s"><%- c.all ? pill('All ' + c.has + ' tests available', 'green') : pill(c.has + ' of ' + ids.length + ' tests · ' + c.missing + ' missing', 'amber') %><%- pill('Reports: ' + (c.slowest || 'Same day'), 'gray') %><% if (!c.online_booking) { %><%- pill('Phone booking only', 'red') %><% } %></div>
+          <table class="tbl mini mt-s"><% for (const r of c.rows) { %><tr><td><%= r.name %></td><td class="muted"><%= r.report_time %></td><td style="text-align:right"><% if (r.discount_pct) { %><s class="muted"><%= money(r.price) %></s> <% } %><b><%= money(Math.round(r.price * (1 - r.discount_pct / 100))) %></b></td></tr><% } %></table>
+          <form method="post" action="/patient/tests/book-multi" class="row mt-s"><%- include('../partials/csrf') %><input type="hidden" name="center_id" value="<%= c.id %>"><% for (const id of ids) { %><input type="hidden" name="t" value="<%= id %>"><% } %>
+            <label class="f" style="margin:0">Preferred date<input type="date" name="preferred_date" min="<%= todayInput() %>" style="margin:0"></label>
+            <button class="btn" <%= c.online_booking ? '' : 'disabled' %>>Book <%= c.has %> test<%= c.has > 1 ? 's' : '' %> here</button>
+            <% if (c.phone) { %><a class="btn ghost" href="tel:<%= c.phone %>"><%- icon('phone', 16) %></a><% } %></form>
+        </article>
+      <% }) %>
+    </div>
+    <section class="card map-card" style="align-self:start;position:sticky;top:90px"><h2>On the map</h2><div class="map" data-map data-me="live" data-points="<%= JSON.stringify(points) %>"></div><p class="muted small mt-s"><span data-gps>Using your saved address</span></p></section>
+  </div>
+<% } %>
+<%- include('../partials/bottom') %>

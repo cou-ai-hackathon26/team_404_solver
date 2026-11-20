@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run MediConnect (debug)",
+      "program": "${workspaceFolder}/src/server.js",
+      "runtimeArgs": ["--disable-warning=ExperimentalWarning"],
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Reset & re-seed demo data",
+      "program": "${workspaceFolder}/src/seed.js",
+      "args": ["--reset"],
+      "console": "integratedTerminal"
+    }
+  ]
+}

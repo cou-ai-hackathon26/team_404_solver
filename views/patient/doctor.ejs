@@ -1,0 +1,46 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div class="row nowrap"><%- avatar(doctor.full_name, 'xl', doctor.user_id) %><div><h1><%= doctor.full_name %></h1><p><%= doctor.specialty %> · <%= doctor.qualifications %></p>
+  <div class="chips mt-s"><%- pill('Verified', 'green') %><%- pill(doctor.experience_years + ' years experience') %><% if (doctor.live) { %><span class="badge red"><span class="pulse-dot"></span> Live location on</span><% } %></div></div></div>
+  <div class="fee-card"><span>Consultation fee</span><b><%= money(doctor.fee) %></b><small>Pay at the chamber or online consultation</small></div></div>
+<div class="grid g-main">
+  <section class="card">
+    <div class="card-h"><h2>Book an available slot</h2><span class="legend"><span><i style="background:var(--indigo)"></i>Selected</span><span><i style="background:#fff;border:1px solid #cbd5e1"></i>Available</span><span><i style="background:#e2e8f0"></i>Booked</span></span></div>
+    <p class="muted">Click a free time and send it. <%= doctor.full_name %> approves or declines it and you get a notification straight away.</p>
+    <form method="post" action="/patient/doctors/<%= doctor.user_id %>/request" class="mt"><%- include('../partials/csrf') %>
+      <% if (entry) { %><input type="hidden" name="health_entry_id" value="<%= entry.id %>"><% } %>
+      <div class="days"><% for (const d of strip) { %><a class="day <%= d.day === day ? 'on' : '' %> <%= d.open ? '' : 'closed' %>" href="?day=<%= d.day %><%= entry ? '&entry=' + entry.id : '' %>"><small><%= d.dow %></small><b><%= d.num %></b></a><% } %></div>
+      <div class="slots mt-s">
+        <% if (!slots.length) { %><div class="empty small" style="grid-column:1/-1"><%= off === 'closed' ? 'The doctor does not see patients on this day. Pick another day.' : off %></div><% } %>
+        <% for (const s of slots) { %><label class="slot"><input type="radio" name="slot" value="<%= s.iso %>" <%= s.state !== 'open' ? 'disabled' : '' %>><span><%= s.label %></span></label><% } %>
+      </div>
+      <label class="f mt">Reason for visit<textarea name="reason" placeholder="Short description of your problem"><%= entry ? entry.description : '' %></textarea></label>
+      <details class="mt-s"><summary class="small muted">No slot suits you? Describe a time instead</summary><label class="f mt-s">Preferred time<input name="preferred_time" placeholder="e.g. Weekday evenings after 6 PM"></label></details>
+      <div class="row between mt">
+        <div class="seg" style="max-width:320px">
+          <% if (doctor.in_person) { %><label><input type="radio" name="mode" value="in_person" checked><span>In person</span></label><% } %>
+          <% if (doctor.online) { %><label><input type="radio" name="mode" value="online" <%= doctor.in_person ? '' : 'checked' %>><span>Online</span></label><% } %>
+        </div>
+        <button class="btn lg"><%- icon('calendar', 18) %> Book slot · <%= money(doctor.fee) %></button>
+      </div>
+    </form>
+  </section>
+  <div class="stack">
+    <section class="card map-card"><div class="row between"><h2>Distance</h2><span class="muted small"><span class="pulse-dot"></span> <span data-gps>Finding your live location…</span></span></div>
+      <div class="map sm" data-map data-me="live" data-target="d<%= doctor.user_id %>" data-poll="/patient/doctors/<%= doctor.user_id %>/location" data-every="15000" data-points="<%= JSON.stringify(points) %>"></div>
+      <div class="grid g2 mt-s" style="gap:10px">
+        <div class="item" style="margin:0"><div><span class="muted small">From you</span><div><b data-distance><%= doctor.distance != null ? doctor.distance + ' km' : '—' %></b></div></div></div>
+        <div class="item" style="margin:0"><div><span class="muted small">Travel time</span><div><b data-eta><%= doctor.distance != null ? Math.max(2, Math.round(doctor.distance * 3 + 2)) + ' min' : '—' %></b></div></div></div>
+      </div>
+      <p class="muted small mt-s"><%= doctor.live ? 'Doctor is sharing a live location.' : 'Showing the chamber address: ' + (doctor.address || 'not set') %></p></section>
+    <section class="card"><h2>Talk to the doctor</h2>
+      <% if (thread && thread.status === 'accepted') { %><p class="muted mt-s">Your chat request was accepted.</p><a class="btn block mt-s" href="/messages/<%= thread.id %>"><%- icon('message', 17) %> Open chat</a>
+      <% } else if (thread) { %><p class="muted mt-s">Chat request sent. You can message once the doctor accepts.</p><%- pill('Waiting for doctor', 'amber') %>
+      <% } else { %><form method="post" action="/messages/request/<%= doctor.user_id %>" class="mt-s"><%- include('../partials/csrf') %><input name="topic" placeholder="What do you want to ask? (optional)"><button class="btn ghost block"><%- icon('message', 17) %> Send chat request</button></form><% } %></section>
+    <section class="card"><h2>About</h2><p class="mt-s"><%= doctor.bio || 'Verified specialist on MediConnect.' %></p>
+      <div class="toggle-row"><span>Chamber</span><b><%= doctor.address || '—' %></b></div>
+      <div class="toggle-row"><span>Registration</span><b><%= doctor.license_no %></b></div></section>
+    <section class="card"><h2>Weekly hours</h2>
+      <% for (const h of hours) { %><div class="toggle-row"><span><%= WEEKDAYS[h.weekday] %></span><% if (h.enabled) { %><b><%= h.start_time %> – <%= h.end_time %></b><% } else { %><span class="muted">Closed</span><% } %></div><% } %></section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

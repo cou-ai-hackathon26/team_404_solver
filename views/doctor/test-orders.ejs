@@ -1,0 +1,7 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Test orders</h1><p>Tests you prescribed and where each one stands. Results open only with the patient's approval.</p></div></div>
+<section class="card"><div class="tbl-wrap"><table class="tbl"><tr><th>Patient</th><th>Test</th><th>Ordered</th><th>Center</th><th>Status</th><th></th></tr>
+  <% for (const o of list) { %><tr><td><b><%= o.patient_name %></b></td><td><%= o.name %></td><td><%= shortDate(o.created_at) %></td><td><%= o.center_name || '—' %></td><td><%- o.report_id ? pill('Report ready', 'green') : badge(o.status) %></td>
+    <td><% if (o.canView) { %><a class="btn ghost sm" href="/files/report/<%= o.report_id %>" target="_blank">View</a><% } else if (o.report_id) { %><a class="btn ghost sm" href="/doctor/patients?id=<%= o.patient_id %>">Request access</a><% } %></td></tr><% } %></table></div>
+  <% if (!list.length) { %><div class="empty small">No tests ordered yet.</div><% } %></section>
+<%- include('../partials/bottom') %>

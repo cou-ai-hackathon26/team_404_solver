@@ -1,0 +1,67 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Appointments</h1><p>Confirm proposed times or choose another one.</p></div>
+  <div class="row"><% if (counts.reply) { %><%- pill(counts.reply + ' needs your reply', 'amber') %><% } %><%- pill(counts.confirmed + ' confirmed', 'green') %><a class="btn sm" href="/patient/find-doctor"><%- icon('plus', 16) %>New</a></div></div>
+<% if (!sel) { %><div class="empty">No appointments yet. <a href="/patient/find-doctor">Find a doctor</a> to request one.</div><% } else { %>
+<div class="grid g-main">
+  <div class="stack">
+    <section class="card" style="border:2px solid <%= sel.status === 'proposed' ? '#6366f1' : 'transparent' %>">
+      <div class="row between nowrap"><div class="row nowrap"><%- avatar(sel.doctor_name, 'lg', sel.doctor_id) %><div><h3 style="font-size:18px"><%= sel.doctor_name %></h3><span class="muted"><%= sel.specialty %> · <%= sel.mode === 'online' ? 'Online' : 'In person' %> · <%= money(sel.fee) %></span></div></div><%- badge(sel.status) %></div>
+      <% if (sel.proposed_time && ['proposed','confirmed'].includes(sel.status)) { %>
+        <div class="item mt"><div class="grow"><span class="muted small"><%= sel.status === 'confirmed' ? 'Confirmed time' : 'Proposed time' %></span><div style="font-size:22px;font-weight:800;color:var(--ink)"><%= new Date(sel.proposed_time).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) %> · <%= fmtTime(sel.proposed_time) %></div></div><span class="muted"><%= sel.duration %> min</span></div>
+      <% } else if (sel.status === 'requested') { %>
+        <div class="note blue mt"><%- icon('clock', 18) %> Waiting for the doctor to propose a time from their schedule.</div>
+      <% } else if (sel.status === 'reschedule_requested') { %>
+        <div class="note blue mt"><%- icon('clock', 18) %> You asked for <b><%= sel.preferred_time && /^\d{4}-\d{2}-\d{2}T/.test(sel.preferred_time) ? friendly(sel.preferred_time) : sel.preferred_time %></b>. Waiting for the doctor.</div>
+      <% } %>
+      <% if (sel.doctor_note) { %><p class="muted mt-s">Doctor note: <%= sel.doctor_note %></p><% } %>
+      <% if (sel.status === 'proposed') { %>
+        <div class="grid g2 mt" style="gap:12px">
+          <form method="post" action="/patient/appointments/<%= sel.id %>/confirm"><%- include('../partials/csrf') %><button class="btn block">Confirm appointment</button></form>
+          <a class="btn ghost block" href="#reschedule">Choose another time</a>
+        </div>
+        <% if (alts.length) { %><p class="small mt">The doctor also offered:</p><div class="row mt-s"><% for (const t of alts) { %><form method="post" action="/patient/appointments/<%= sel.id %>/confirm"><%- include('../partials/csrf') %><input type="hidden" name="time" value="<%= t %>"><button class="btn ghost sm"><%= friendly(t) %></button></form><% } %></div><% } %>
+      <% } %>
+      <% if (['requested','proposed','reschedule_requested','confirmed'].includes(sel.status)) { %>
+        <form method="post" action="/patient/appointments/<%= sel.id %>/cancel" data-confirm="Cancel this appointment?" class="mt-s"><%- include('../partials/csrf') %><button class="link" style="color:var(--red)">Cancel appointment</button></form>
+      <% } %>
+      <% if (sel.consultation_notes) { %><div class="note blue mt"><%- icon('pen', 18) %><span><b>Consultation notes:</b> <%= sel.consultation_notes %></span></div><% } %>
+    </section>
+
+    <% if (strip.length) { %>
+    <section class="card" id="reschedule">
+      <h2>Reschedule options</h2>
+      <div class="days mt" style="grid-template-columns:repeat(5,1fr)"><% for (const d of strip) { %><a class="day <%= d.day === day ? 'on' : '' %> <%= d.open ? '' : 'closed' %>" href="?id=<%= sel.id %>&day=<%= d.day %>#reschedule"><small><%= d.dow %></small><b><%= d.num %></b></a><% } %></div>
+      <form method="post" action="/patient/appointments/<%= sel.id %>/reschedule"><%- include('../partials/csrf') %>
+        <div class="slots s3 mt">
+          <% if (!slots.length) { %><div class="empty small" style="grid-column:1/-1"><%= off === 'closed' ? 'The doctor is not available this day.' : off %></div><% } %>
+          <% for (const s of slots) { %><label class="slot"><input type="radio" name="slot" value="<%= s.iso %>" <%= s.state !== 'open' ? 'disabled' : '' %> <%= sel.proposed_time === s.iso ? 'checked' : '' %>><span><%= s.label %></span></label><% } %>
+        </div>
+        <button class="btn ghost block mt">Send my preferred time</button>
+      </form>
+    </section>
+    <% } %>
+  </div>
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:14px">Upcoming</h2>
+      <% if (!upcoming.length) { %><div class="empty small">No confirmed appointments.</div><% } %>
+      <% for (const a of upcoming) { %><a class="item" href="?id=<%= a.id %>"><div class="grow"><b><%= a.doctor_name %></b><div class="meta"><%= friendly(a.proposed_time) %> · <%= a.specialty %></div></div><%- badge('confirmed') %></a><% } %>
+    </section>
+    <section class="card" id="messages"><h2 style="margin-bottom:14px">Communication history</h2>
+      <div class="timeline">
+        <% messages.forEach((m, i) => { %><div class="tl"><span class="dot <%= m.kind === 'message' ? 'purple' : m.sender_id === user.id ? 'blue' : 'orange' %>"></span><b style="font-size:14.5px"><%= m.kind === 'message' ? m.full_name + ': ' : '' %><%= m.body %></b><span class="small"><%= friendly(m.created_at) %></span></div><% }) %>
+        <% if (sel.status === 'proposed') { %><div class="tl"><span class="dot purple"></span><b style="font-size:14.5px">Waiting for your confirmation</b><span class="small">Reply in the portal</span></div><% } %>
+      </div>
+      <% if (!['cancelled','declined'].includes(sel.status)) { %>
+      <form method="post" action="/patient/appointments/<%= sel.id %>/message" class="mt"><%- include('../partials/csrf') %>
+        <textarea name="body" required placeholder="Message <%= sel.doctor_name %>" style="min-height:70px"></textarea><button class="btn sm mt-s">Send</button></form>
+      <% } %>
+    </section>
+    <% const others = active.filter(a => a.id !== sel.id && a.status !== 'confirmed'); if (others.length || history.length) { %>
+    <section class="card"><h2 style="margin-bottom:14px">All appointments</h2>
+      <% for (const a of [...others, ...history.slice(0, 6)]) { %><a class="item" href="?id=<%= a.id %>"><div class="grow"><b><%= a.doctor_name %></b><div class="meta"><%= a.proposed_time ? friendly(a.proposed_time) : 'Time not set' %></div></div><%- badge(a.status) %></a><% } %>
+    </section>
+    <% } %>
+  </div>
+</div>
+<% } %>
+<%- include('../partials/bottom') %>

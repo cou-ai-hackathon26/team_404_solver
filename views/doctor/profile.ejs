@@ -1,0 +1,14 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Doctor profile</h1><p>What patients see when the AI recommends you.</p></div><a class="btn ghost" href="/account">Password and devices</a></div>
+<form method="post" action="/doctor/profile" class="card"><%- include('../partials/csrf') %>
+  <div class="fgrid">
+    <label class="f">Specialty<input value="<%= profile.specialty %>" disabled></label><label class="f">Registration no.<input value="<%= profile.license_no || '' %>" disabled></label>
+    <label class="f">Qualifications<input name="qualifications" value="<%= profile.qualifications || '' %>"></label><label class="f">Years of experience<input type="number" min="0" name="experience_years" value="<%= profile.experience_years %>"></label>
+    <label class="f">Consultation fee (BDT)<input type="number" min="0" name="fee" value="<%= profile.fee %>"></label><label class="f">Shown to patients<input value="Before they book a slot" disabled></label>
+    <label class="f full">About you<textarea name="bio"><%= profile.bio || '' %></textarea></label>
+    <label class="f full">Chamber address<input name="address" value="<%= profile.address || '' %>"></label>
+    <label class="f">Latitude<input name="lat" value="<%= profile.lat ?? '' %>"></label><label class="f">Longitude<input name="lng" value="<%= profile.lng ?? '' %>"></label>
+  </div>
+  <div class="row"><button class="btn">Save profile</button><button type="button" class="btn ghost" data-geolocate>Use my location</button><span class="muted small">Hours and consultation types are set in <a href="/doctor/schedule">My Schedule</a>.</span></div>
+</form>
+<%- include('../partials/bottom') %>

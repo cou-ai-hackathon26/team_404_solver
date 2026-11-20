@@ -1,0 +1,17 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Vehicle & profile</h1><p>What patients see on the map.</p></div><a class="btn ghost" href="/account">Password and devices</a></div>
+<form method="post" action="/ambulance/profile" class="card"><%- include('../partials/csrf') %>
+  <div class="fgrid">
+    <label class="f">Service name<input name="service_name" value="<%= a.service_name %>"></label>
+    <label class="f">Vehicle number<input value="<%= a.vehicle_no %>" disabled></label>
+    <label class="f">Type<select name="kind"><% for (const k of ['Non-AC', 'AC', 'ICU / Life support', 'Freezer van']) { %><option <%= a.kind === k ? 'selected' : '' %>><%= k %></option><% } %></select></label>
+    <label class="f">Base area<input name="base_area" value="<%= a.base_area || '' %>"></label>
+    <label class="f">Driver name<input name="driver_name" value="<%= a.driver_name || '' %>"></label>
+    <label class="f">Driver phone<input name="driver_phone" value="<%= a.driver_phone || '' %>"></label>
+    <label class="f">Base fare (BDT)<input type="number" min="0" name="base_fare" value="<%= a.base_fare %>"></label>
+    <label class="f">Per km (BDT)<input type="number" min="0" name="per_km" value="<%= a.per_km %>"></label>
+    <label class="f">Parking latitude<input name="lat" value="<%= a.lat ?? '' %>"></label><label class="f">Parking longitude<input name="lng" value="<%= a.lng ?? '' %>"></label>
+  </div>
+  <div class="row"><button class="btn">Save</button><button type="button" class="btn ghost" data-geolocate>Use my location</button></div>
+</form>
+<%- include('../partials/bottom') %>

@@ -1,0 +1,4 @@
+{
+  "files.associations": { "*.ejs": "html" },
+  "editor.tabSize": 2
+}

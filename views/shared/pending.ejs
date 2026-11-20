@@ -1,0 +1,10 @@
+<%- include('../partials/head') %>
+<body><div class="auth" style="grid-template-columns:1fr"><section class="auth-form">
+<div class="auth-card" style="max-width:560px">
+  <span class="steps-mini"><span class="ok">1 Details</span><span class="ok">2 Email verified</span><span class="on">3 Admin review</span></span>
+  <h1 style="font-size:26px">Your account is being verified</h1>
+  <p class="sub">Thanks for registering<%= user.displayName ? ', ' + user.displayName : '' %>. An administrator is checking your license and documents. You will get a notification as soon as your portal is active.</p>
+  <% const r = user.review_note; %>
+  <div class="note blue"><%- icon('clock', 18) %> Usually within one working day.</div>
+  <form method="post" action="/logout" class="mt"><%- include('../partials/csrf') %><button class="btn ghost">Log out</button></form>
+</div></section></div></body></html>

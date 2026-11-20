@@ -1,0 +1,17 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Staff</h1><p>Each staff member has their own login with email OTP. Only administrators manage prices and staff.</p></div></div>
+<div class="grid g-main">
+  <section class="card"><div class="tbl-wrap"><table class="tbl"><tr><th>Name</th><th>Role</th><th>Email</th><th>Reports uploaded</th><th>Status</th><th></th></tr>
+    <% for (const s of staff) { %><tr><td><div class="row nowrap"><%- avatar(s.full_name, 'sm', s.id) %><b><%= s.full_name %></b></div></td><td><%= s.is_admin ? 'Administrator' : s.title || 'Staff' %></td><td><%= s.email %></td><td><%= s.uploads %></td>
+      <td><%- s.email_verified ? pill('Active', 'green') : pill('Verifies at first login', 'amber') %></td>
+      <td><% if (user.isCenterAdmin && !s.is_admin) { %><form method="post" action="/center/staff/<%= s.id %>/remove" data-confirm="Remove <%= s.full_name %>? Their account will be suspended."><%- include('../partials/csrf') %><button class="btn danger sm">Remove</button></form><% } %></td></tr><% } %></table></div></section>
+  <% if (user.isCenterAdmin) { %>
+  <section class="card soft"><h2 style="margin-bottom:14px">Add staff member</h2>
+    <form method="post" action="/center/staff"><%- include('../partials/csrf') %>
+      <label class="f">Full name<input name="full_name" required></label><label class="f">Job title<input name="title" placeholder="e.g. Lab technician"></label>
+      <label class="f">Email<input type="email" name="email" required></label><label class="f">Phone<input name="phone"></label>
+      <label class="f">Temporary password<input type="password" name="password" required minlength="8"></label>
+      <button class="btn block">Create account</button></form></section>
+  <% } %>
+</div>
+<%- include('../partials/bottom') %>

@@ -1,0 +1,45 @@
+<%- include('../partials/top') %>
+<div class="page-h"><div><h1>Checkout</h1><p><%= option.name %> · <%= km(option.distance) %></p></div><a class="btn ghost" href="/patient/shop/cart">Back to cart</a></div>
+<form method="post" action="/patient/shop/checkout?_csrf=<%= csrf %>&pharmacy=<%= option.id %>" enctype="multipart/form-data" id="checkout" class="grid g-main-r" data-checkout>
+  <input type="hidden" name="pharmacy_id" value="<%= option.id %>">
+  <div class="stack">
+    <section class="card"><h2>1. Delivery location</h2>
+      <p class="muted small mt-s"><span class="pulse-dot"></span> <span data-gps>Allow location to use where you are now.</span> You can also tap the map to move the pin.</p>
+      <div class="map sm mt-s" data-map data-me="live" data-fill="checkout" data-pick="checkout" data-points="<%= JSON.stringify(points) %>"></div>
+      <input type="hidden" name="lat" value="<%= me.lat ?? '' %>"><input type="hidden" name="lng" value="<%= me.lng ?? '' %>">
+      <label class="f mt-s">Delivery address<input name="delivery_address" value="<%= profile.address || '' %>" required placeholder="House, road, area"></label></section>
+    <section class="card"><h2>2. Delivery type</h2>
+      <div class="grid g2 mt-s choice">
+        <label class="choice-card"><input type="radio" name="order_type" value="regular" checked data-fee="<%= option.delivery_fee %>"><span><%- icon('truck', 22) %><b>Regular</b><small>~<%= option.eta %> min · <%= money(option.delivery_fee) %></small></span></label>
+        <label class="choice-card red"><input type="radio" name="order_type" value="emergency" data-fee="<%= option.emergency_fee %>"><span><%- icon('ambulance', 22) %><b>Emergency</b><small>~<%= option.etaEmergency %> min · <%= money(option.emergency_fee) %> (priority)</small></span></label>
+      </div></section>
+    <section class="card"><h2>3. Prescription <%= needsRx ? '' : '(optional)' %></h2>
+      <% if (needsRx) { %><p class="muted small mt-s">Some medicines are prescription-only. The pharmacist checks it before sending.</p><% } %>
+      <div class="fgrid mt-s"><label class="f">Use a saved prescription<select name="prescription_id"><option value="">None</option><% for (const p of prescriptions) { %><option value="<%= p.id %>"><%= p.doctor_name ? 'Dr: ' + p.doctor_name : 'Uploaded' %> · <%= shortDate(p.created_at) %></option><% } %></select></label>
+        <label class="drop small"><%- icon('upload', 20) %><b>Or upload a photo</b><span data-fname>JPG, PNG or PDF</span><input type="file" name="rx_file" accept=".pdf,image/*"></label></div></section>
+    <section class="card"><h2>4. Payment</h2>
+      <div class="pay-tabs mt-s">
+        <% if (option.accepts_cod) { %><label><input type="radio" name="payment" value="cod" checked><span><%- icon('wallet', 20) %> Cash on delivery</span></label><% } %>
+        <% if (option.accepts_online) { %>
+          <label><input type="radio" name="payment" value="mobile" <%= option.accepts_cod ? '' : 'checked' %>><span><%- icon('mobile', 20) %> Mobile banking</span></label>
+          <label><input type="radio" name="payment" value="card"><span><%- icon('card', 20) %> Card</span></label>
+          <label><input type="radio" name="payment" value="bank"><span><%- icon('bank', 20) %> Bank</span></label>
+        <% } %>
+      </div>
+      <div class="pay-panel" data-pay="cod"><p class="muted">Pay the rider in cash when the medicines arrive.</p></div>
+      <div class="pay-panel hidden" data-pay="mobile">
+        <div class="wallets"><% WALLETS.forEach((w, i) => { %><label class="wallet <%= w.toLowerCase() %>"><input type="radio" name="wallet" value="<%= w %>" <%= i === 0 ? 'checked' : '' %>><span><%= w %></span></label><% }) %></div>
+        <label class="f mt-s">Wallet number<input name="wallet_number" placeholder="01XXXXXXXXX" inputmode="numeric"></label></div>
+      <div class="pay-panel hidden" data-pay="card"><div class="fgrid"><label class="f full">Card number<input name="card_number" placeholder="4111 1111 1111 1111" inputmode="numeric" autocomplete="cc-number"></label>
+        <label class="f">Expiry (MM/YY)<input name="card_expiry" placeholder="08/28" autocomplete="cc-exp"></label><label class="f">CVV<input name="card_cvv" placeholder="123" inputmode="numeric" autocomplete="cc-csc"></label></div></div>
+      <div class="pay-panel hidden" data-pay="bank"><div class="fgrid"><label class="f">Bank<select name="bank"><% for (const bk of BANKS) { %><option><%= bk %></option><% } %></select></label><label class="f">Account number<input name="bank_account" inputmode="numeric"></label></div></div>
+      <p class="muted small mt-s"><%- icon('shield', 14) %> Demo payment gateway (sandbox): no real money is charged. Only the last 4 digits are stored.</p></section>
+  </div>
+  <aside class="card summary" style="align-self:start;position:sticky;top:90px"><h2>Order summary</h2>
+    <% for (const l of option.lines.filter((l) => l.available)) { %><div class="toggle-row"><span><%= l.item.name %> × <%= l.available %></span><b><%= money(l.unit * l.available) %></b></div><% } %>
+    <% if (option.saved) { %><div class="toggle-row"><span>Discount</span><b style="color:var(--green)">− <%= money(option.saved) %></b></div><% } %>
+    <div class="toggle-row"><span>Delivery</span><b data-fee-out><%= money(option.delivery_fee) %></b></div>
+    <div class="toggle-row total"><span>Total</span><b data-total="<%= option.subtotal %>"><%= money(option.subtotal + option.delivery_fee) %></b></div>
+    <button class="btn block lg mt"><%- icon('check', 18) %> Place order</button></aside>
+</form>
+<%- include('../partials/bottom') %>

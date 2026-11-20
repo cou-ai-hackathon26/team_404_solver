@@ -1,0 +1,32 @@
+<%- include('../partials/top') %>
+<section class="hero teal med">
+  <div><h1><%= center.name %></h1><p><%= s.newReq %> new test request<%= s.newReq === 1 ? '' : 's' %> and <%= s.toUpload %> report<%= s.toUpload === 1 ? ' is' : 's are' %> waiting for upload. Reports go straight to the patient portal.</p>
+    <div class="actions"><a class="btn white" href="/center/upload">Upload report</a><a class="btn glass" href="/center/requests">View requests</a></div></div>
+  <div class="hero-side"><small>Next sample collection</small><% if (next) { %><b><%= next.patient_name %></b><div><%= next.test_name %> · <%= fmtTime(next.scheduled_at) %></div><% } else { %><b>None scheduled</b><div>Confirm times for new requests.</div><% } %></div>
+  <%- include('../partials/stickers', { set: 'doctor' }) %>
+</section>
+<div class="grid g4 mt"><% for (const c of cards) { %><%- include('../partials/stat', { s: c }) %><% } %></div>
+<div class="grid g-main mt">
+  <section class="card"><div class="card-h"><h2>Tests completed this week</h2><%- pill(week[0].label + ' to ' + week.at(-1).label) %></div><%- bars(week.map(w => w.n), week.map(w => w.label)) %></section>
+  <section class="card"><h2>Request status</h2><div class="mt"><%- donut(ring, s.newReq, 'New') %></div>
+    <div class="chips mt" style="justify-content:center"><%- pill('Scheduled') %><%- pill('Sample pending', 'amber') %><%- pill('Report ready', 'green') %></div></section>
+</div>
+<div class="grid g-main mt">
+  <section class="card"><div class="card-h"><h2>Test requests</h2><a href="/center/requests" style="text-decoration:underline;font-weight:600">View all</a></div>
+    <% if (!list.length) { %><div class="empty small">No open requests.</div><% } %>
+    <% for (const o of list) { %><div class="item"><div class="grow"><b style="font-size:16px"><%= o.patient_name %> · <%= o.test_name %></b><div class="meta"><%= o.doctor_name || 'Walk-in' %> · <%= o.scheduled_at ? friendly(o.scheduled_at) : 'Not scheduled' %></div></div>
+      <% if (o.status === 'scheduled') { %><form method="post" action="/center/requests/<%= o.id %>/collected"><%- include('../partials/csrf') %><button class="btn sm">Collect</button></form><%- pill('Sample pending', 'amber') %>
+      <% } else if (o.status === 'requested') { %><a class="btn ghost sm" href="/center/requests?f=requested">Start</a><%- pill('Requested') %>
+      <% } else { %><a class="btn ghost sm" href="/center/upload?id=<%= o.id %>">Upload</a><%- pill('Report ready', 'green') %><% } %></div><% } %>
+  </section>
+  <form class="card soft" method="post" action="/center/upload/<%= uploadable[0] ? uploadable[0].id : 0 %>?_csrf=<%= csrf %>" enctype="multipart/form-data" id="quick-upload">
+    <h2>Upload report</h2><p class="muted mt-s">The report links to the patient, test, doctor request and date automatically.</p>
+    <% if (!uploadable.length) { %><div class="empty small mt">Nothing to upload.</div><% } else { %>
+      <p class="small mt-s"><b>For:</b> <%= uploadable[0].patient_name %> · <%= uploadable[0].test_name %> <a href="/center/upload">change</a></p>
+      <label class="drop mt-s"><%- icon('file', 30) %><b data-fname>Drop PDF here or browse</b><small>PDF or image, up to 10 MB</small><input type="file" name="file" accept="application/pdf,image/*" required></label>
+      <input type="hidden" name="test_date" value="<%= todayInput() %>">
+      <button class="btn block lg mt">Upload and notify patient</button>
+    <% } %>
+  </form>
+</div>
+<%- include('../partials/bottom') %>

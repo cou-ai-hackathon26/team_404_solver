@@ -1,0 +1,39 @@
+<%- include('../partials/auth-top') %>
+<div class="auth-card" style="<%= step !== 1 ? 'opacity:.55;padding:22px 34px' : '' %>">
+  <span class="steps-mini"><span class="<%= step > 1 ? 'ok' : 'on' %>">Step 1 of 3</span></span>
+  <h2>Forgot password?</h2>
+  <% if (step === 1) { %>
+  <p class="sub">Enter your registered email and we will send a code.</p>
+  <form method="post" action="/forgot-password"><%- include('../partials/csrf') %>
+    <label class="f">Email address<input type="email" name="email" required autofocus></label>
+    <button class="btn block lg">Send code</button>
+  </form>
+  <% } %>
+</div>
+<div class="auth-card" style="margin-top:18px;<%= step !== 2 ? 'opacity:.55;padding:22px 34px' : '' %>">
+  <span class="steps-mini"><span class="<%= step > 2 ? 'ok' : step === 2 ? 'on' : '' %>">Step 2 of 3</span></span>
+  <h2>Enter the code</h2>
+  <% if (step === 2) { %>
+  <p class="sub">Sent to <%= email %></p>
+  <% if (devOtp) { %><div class="alert info small">Development mode: your code is <code><%= devOtp %></code>.</div><% } %>
+  <form method="post" action="/verify-otp"><%- include('../partials/csrf') %>
+    <input type="hidden" name="code" id="reset-code">
+    <div class="otp-boxes" data-otp="#reset-code"><% for (let i = 0; i < 6; i++) { %><input inputmode="numeric" maxlength="1" aria-label="Digit <%= i + 1 %>"><% } %></div>
+    <div class="row between" style="margin-top:18px"><button class="link" form="resend-form" style="text-decoration:none;color:var(--muted);font-weight:500">Resend<span data-countdown="<%= wait %>"></span></button><button class="btn">Verify code</button></div>
+  </form>
+  <form method="post" action="/resend-otp" id="resend-form"><%- include('../partials/csrf') %></form>
+  <% } %>
+</div>
+<div class="auth-card" style="margin-top:18px;<%= step !== 3 ? 'opacity:.55;padding:22px 34px' : '' %>">
+  <span class="steps-mini"><span class="<%= step === 3 ? 'on' : '' %>">Step 3 of 3</span></span>
+  <h2>Set a new password</h2>
+  <% if (step === 3) { %>
+  <form method="post" action="/reset-password" style="margin-top:16px"><%- include('../partials/csrf') %>
+    <label class="f">New password<input type="password" name="password" required minlength="8" autocomplete="new-password"><small>8+ characters with a letter and a number</small></label>
+    <label class="f">Confirm new password<input type="password" name="confirm_password" required minlength="8" autocomplete="new-password"></label>
+    <button class="btn block lg">Reset password</button>
+  </form>
+  <% } %>
+  <p class="muted" style="text-align:center;margin-top:14px">Back to <a href="/login" style="text-decoration:underline;font-weight:600">Log in</a></p>
+</div>
+<%- include('../partials/auth-bottom') %>

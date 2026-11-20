@@ -1,0 +1,54 @@
+<%- include('head') %>
+<body data-user="<%= user ? user.id : '' %>" data-role="<%= user ? user.role : '' %>">
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="<%= dashboard %>"><span class="logo"><%- icon('heart', 22) %></span> MediConnect</a>
+    <nav class="nav">
+      <% for (const [section, links] of nav) { %>
+        <div class="nav-sec"><%= section %></div>
+        <% for (const [href, text, ic] of links) {
+             const base = href.split('?')[0];
+             const isRoot = base.split('/').length === 2;
+             const on = href.includes('?') ? url === href || url.startsWith(href + '&') : (isRoot ? path === base || path === base + '/' : path === base || path.startsWith(base + '/'));
+        %>
+          <a href="<%= href %>" class="<%= on ? 'active' : '' %>"><%- icon(ic) %><%= text %></a>
+        <% } %>
+      <% } %>
+      <form method="post" action="/logout"><%- include('csrf') %><button class="logout"><%- icon('logout') %>Logout</button></form>
+    </nav>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" type="button" data-menu aria-label="Menu"><%- icon('chart') %></button>
+      <form class="search" action="/search" method="get">
+        <%- icon('search', 18) %><input name="q" placeholder="Search doctors, reports, medicines..." value="<%= typeof q === 'string' ? q : '' %>" aria-label="Search">
+      </form>
+      <div class="top-right">
+        <span class="date-chip"><%= dateChip() %></span>
+        <div class="notif-wrap">
+          <button class="bell" type="button" data-bell aria-label="Notifications"><%- icon('bell', 21) %><% if (unread) { %><span class="dot" id="unread-dot"></span><% } %></button>
+          <div class="dropdown hidden" id="notif-dd">
+            <div class="row between"><h3>Notifications</h3>
+              <form method="post" action="/notifications/read-all" class="inline"><%- include('csrf') %><button class="link small">Mark all as read</button></form></div>
+            <div class="tabs-mini"><button type="button" class="on" data-ntab="all">All</button><button type="button" data-ntab="unread">Unread <%= unread %></button></div>
+            <div id="notif-list">
+              <% const KI = { report: ['file','t-teal'], appointment: ['calendar','t-blue'], access: ['shield','t-orange'], order: ['pill','t-pink'], test: ['flask','t-sky'], reminder: ['alarm','t-purple'], blood: ['drop','t-red'], review: ['star','t-orange'], account: ['user','t-blue'], chat: ['message','t-teal'], ambulance: ['ambulance','t-red'] }; %>
+              <% if (!latest.length) { %><div class="empty small">No notifications yet</div><% } %>
+              <% for (const n of latest) { const k = KI[n.kind] || ['bell','t-blue']; %>
+                <a class="notif <%= n.is_read ? '' : 'unread' %>" href="/notifications/<%= n.id %>/open" data-read="<%= n.is_read %>">
+                  <span class="tile sm <%= k[1] %>"><%- icon(k[0], 18) %></span>
+                  <span><b><%= n.title %></b><small><%= n.body %></small><small><%= ago(n.created_at) %></small></span>
+                </a>
+              <% } %>
+            </div>
+            <a class="btn ghost block" href="/notifications">View all notifications</a>
+          </div>
+        </div>
+        <a class="who" href="/account"><b><%= user.displayName %></b><span><%= user.subtitle %></span></a>
+        <a href="/account" class="avatar md me" aria-label="Account"><%= initials(user.displayName)[0] %></a>
+      </div>
+    </header>
+    <div id="toasts"></div>
+    <main class="content">
+      <% for (const f of flash) { %><div class="alert <%= f.type %>"><%= f.msg %></div><% } %>
+      <% if (typeof errors !== 'undefined' && errors && errors.length) { %><div class="alert error"><ul><% for (const e of errors) { %><li><%= e %></li><% } %></ul></div><% } %>

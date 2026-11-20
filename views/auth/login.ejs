@@ -1,0 +1,15 @@
+<%- include('../partials/auth-top') %>
+<div class="auth-card">
+  <h1>Welcome back</h1>
+  <p class="sub">Log in and we will take you to your own portal.</p>
+  <form method="post" action="/login">
+    <%- include('../partials/csrf') %>
+    <label class="f">Email address<input type="email" name="email" value="<%= email %>" required autofocus autocomplete="username" placeholder="you@example.com"></label>
+    <label class="f">Password<input type="password" name="password" required autocomplete="current-password" placeholder="Your password"></label>
+    <div class="row end" style="margin:-4px 0 18px"><a href="/forgot-password" class="small" style="text-decoration:underline;font-weight:600">Forgot password?</a></div>
+    <button class="btn block lg">Log in</button>
+  </form>
+  <p class="muted" style="text-align:center;margin-top:16px">New here? <a href="/register" style="text-decoration:underline;font-weight:600">Create account</a></p>
+  <p class="muted small" style="text-align:center;margin-top:6px">Doctor, diagnostic center, medical shop or ambulance? <a href="/register">Choose your account type</a></p>
+</div>
+<%- include('../partials/auth-bottom') %>

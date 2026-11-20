@@ -1,0 +1,29 @@
+<%- include('../partials/top') %>
+<section class="hero teal med">
+  <div><h1><%= pharmacy.name %></h1><p><%= s.newOrders %> new order<%= s.newOrders === 1 ? ' needs' : 's need' %> a response. Orders are processed only against the doctor's verified prescription.</p>
+    <div class="actions"><a class="btn white" href="/pharmacy/orders">Review orders</a><a class="btn glass" href="/pharmacy/stock">Update stock</a></div></div>
+  <div class="hero-side"><small>Oldest waiting order</small><% if (oldest) { %><b><%= oldest.patient_name %></b><div><%= oldest.n %> medicine<%= oldest.n === 1 ? '' : 's' %> · <%= ago(oldest.created_at) %></div><% } else { %><b>All caught up</b><div>No orders waiting.</div><% } %></div>
+  <%- include('../partials/stickers', { set: 'pharmacy' }) %>
+</section>
+<div class="grid g4 mt"><% for (const c of cards) { %><%- include('../partials/stat', { s: c }) %><% } %></div>
+<div class="grid g-main mt">
+  <section class="card"><div class="card-h"><h2>Orders received</h2><%- pill('Last 6 months') %></div><%- areaChart(chart.values, chart.labels) %></section>
+  <section class="card"><h2>Order status</h2><div class="mt"><%- donut(ring, ringTotal, 'Today') %></div>
+    <div class="chips mt" style="justify-content:center"><%- pill('New') %><%- pill('Preparing', 'amber') %><%- pill('Delivered', 'green') %></div></section>
+</div>
+<div class="grid g-main mt">
+  <section class="card"><div class="card-h"><h2>Incoming orders</h2><a href="/pharmacy/orders" style="text-decoration:underline;font-weight:600">View all</a></div>
+    <% if (!incoming.length) { %><div class="empty small">No orders waiting.</div><% } %>
+    <% for (const o of incoming) { %><div class="item"><div class="grow"><b style="font-size:16px"><%= o.patient_name %> · <%= o.n %> medicine<%= o.n === 1 ? '' : 's' %></b>
+      <div class="meta"><%= o.prescription_id ? (o.rx_verified ? 'Prescription verified' : 'Prescription to check') : 'No prescription' %> · <%= o.payment_method === 'cod' ? 'Cash on delivery' : 'Online payment' %><%= o.short && o.status === 'received' ? ' · ' + o.short + ' item' + (o.short > 1 ? 's' : '') + ' short' : '' %></div></div>
+      <% if (o.status === 'received') { %><a class="btn sm <%= o.short ? 'ghost' : '' %>" href="/pharmacy/orders/<%= o.id %>"><%= o.short ? 'Fulfill partly' : 'Accept' %></a><%- o.short ? pill('Partial', 'amber') : pill('New') %>
+      <% } else { %><form method="post" action="/pharmacy/orders/<%= o.id %>/status"><%- include('../partials/csrf') %><input type="hidden" name="status" value="<%= o.status === 'preparing' ? 'ready' : 'out_for_delivery' %>"><% if (o.status === 'ready') { %><a class="btn ghost sm" href="/pharmacy/delivery">Dispatch</a><% } else { %><button class="btn ghost sm">Mark ready</button><% } %></form><%- badge(o.status) %><% } %></div><% } %>
+  </section>
+  <div class="stack">
+    <section class="card"><div class="card-h"><h2>Stock alerts</h2><a href="/pharmacy/stock?f=low" class="small">Manage</a></div>
+      <% for (const a of alerts) { %><div class="mt-s"><div class="row between"><b><%= a.name %> <%= a.strength %></b><span class="muted small"><%= a.quantity %> left</span></div><div class="bar mt-s"><i class="<%= a.quantity < 10 ? 'low' : a.quantity < LOW ? 'mid' : '' %>" style="width:<%= Math.max(4, Math.min(100, a.quantity / 1.5)) %>%"></i></div></div><% } %></section>
+    <section class="card soft"><div class="row between"><h2>Your rating</h2><a href="/pharmacy/reviews" class="small">Reviews</a></div>
+      <div class="row mt-s"><span style="font-size:32px;font-weight:800;color:var(--ink)"><%= rating.average ? rating.average.toFixed(1) : '—' %></span><div><%- stars(rating.average || 0) %><div class="muted small"><%= rating.count %> verified reviews</div></div></div></section>
+  </div>
+</div>
+<%- include('../partials/bottom') %>

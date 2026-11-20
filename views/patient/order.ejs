@@ -1,0 +1,62 @@
+<%- include('../partials/top') %>
+<section class="hero teal compact">
+  <div><h1>Order your medicines</h1><p>Upload your prescription. We read it, then compare nearby pharmacies for you.</p>
+    <% if (prescriptions.length) { %><div class="actions"><% for (const p of prescriptions.slice(0, 3)) { %><a class="btn glass sm" href="?rx=<%= p.id %>"><%= p.source === 'doctor' ? p.doctor_name.replace('Dr. ', 'Dr. ') : 'Uploaded' %> · <%= shortDate(p.created_at) %></a><% } %></div><% } %></div>
+  <form method="post" action="/patient/order/upload?_csrf=<%= csrf %>" enctype="multipart/form-data" style="min-width:340px">
+    <label class="drop glass"><%- icon('file', 30) %><b data-fname><%= rx && rx.original_name ? rx.original_name : 'Drop prescription or browse' %></b><small><%= rx && rx.original_name ? 'Scanned successfully' : 'Photo (JPG/PNG) or PDF' %></small><input type="file" name="file" accept="image/*,application/pdf"></label>
+    <input name="typed" placeholder="Or type medicines, e.g. Napa 500 x10" style="background:rgba(255,255,255,.95)">
+    <button class="btn white block mt-s">Read prescription</button>
+  </form>
+</section>
+
+<% if (!rx) { %>
+  <section class="card mt"><h2>Choose a prescription</h2><p class="muted mt-s">Doctor-issued e-prescriptions are already verified. Uploaded ones are checked by the pharmacist.</p>
+    <div class="grid g3 mt"><% for (const p of prescriptions) { %><a class="item" href="?rx=<%= p.id %>" style="display:block"><b><%= p.source === 'doctor' ? p.doctor_name : 'Uploaded prescription' %></b><div class="meta"><%= shortDate(p.created_at) %> · <%= p.n %> medicine(s)</div><div class="mt-s"><%- p.verified ? pill('Verified', 'green') : pill('Pharmacist will check', 'amber') %></div></a><% } %></div>
+    <% if (!prescriptions.length) { %><div class="empty">No prescriptions yet. Upload one above.</div><% } %></section>
+<% } else { %>
+<section class="card mt">
+  <div class="card-h"><h2>Medicines found</h2><%- rx.verified ? pill('Valid prescription verified', 'green') : pill('Pharmacist will verify this upload', 'amber') %></div>
+  <div class="chips"><% for (const i of items) { %><span class="chip" style="<%= i.medicine_id ? '' : 'background:#fef3c7;color:#92400e' %>"><%= i.medicine_id ? `${i.name} ${i.strength}` : `Not recognised: ${i.raw_name}` %><% if (i.medicine_id) { %> · ×<%= i.quantity %><% } %></span><% } %></div>
+  <% if (!items.length) { %><div class="empty small">No medicines found. Correct the list below.</div><% } %>
+  <% if (rx.source === 'upload') { %>
+    <details class="mt-s"><summary class="small" style="cursor:pointer;color:var(--blue);font-weight:600">Correct the list</summary>
+      <form method="post" action="/patient/order/<%= rx.id %>/items" class="mt-s"><%- include('../partials/csrf') %>
+        <textarea name="lines" rows="5"><%= items.map(i => (i.medicine_id ? `${i.name} ${i.strength}` : i.raw_name) + (i.dose ? ' ' + i.dose : '') + ' x' + i.quantity).join('\n') %></textarea>
+        <button class="btn sm mt-s">Update list</button></form></details>
+  <% } %>
+</section>
+<form method="post" action="/patient/order"><%- include('../partials/csrf') %><input type="hidden" name="rx" value="<%= rx.id %>">
+  <div class="row between mt"><h2>Compare nearby pharmacies</h2><span class="muted">Price, stock, distance and verified ratings</span></div>
+  <% if (!options.length) { %><div class="empty mt-s">No verified pharmacy has these medicines in stock right now.</div><% } %>
+  <div class="grid g3 mt-s">
+    <% options.forEach((o, i) => { %>
+      <article class="card">
+        <div class="row nowrap"><span class="tile <%= ['t-teal','t-orange','t-purple','t-blue','t-pink','t-sky'][i % 6] %>"><%- icon('pill', 22) %></span><div><h3 style="font-size:17px"><%= o.name %></h3><span class="muted"><%= o.distance != null ? o.distance + ' km away' : 'Distance unknown' %></span></div></div>
+        <div class="row between mt-s"><%- o.allAvailable ? pill(`All ${o.lines.length} available`, 'green') : pill(`${o.availableCount} of ${o.lines.length} available`, 'amber') %><span class="muted">About <%= o.eta %> min</span></div>
+        <div class="row mt-s small"><%- stars(o.rating.average || 0) %><span class="muted"><%= o.rating.count ? `${o.rating.average.toFixed(1)} · ${o.rating.count} reviews` : 'No reviews yet' %></span></div>
+        <div class="row between mt"><div><span style="font-size:26px;font-weight:800;color:var(--ink)"><%= money(o.total) %></span><div class="muted small">incl. <%= money(o.delivery_fee) %> delivery</div></div>
+          <button class="btn <%= i === 0 ? '' : 'ghost' %>" name="pharmacy_id" value="<%= o.id %>"><%= o.allAvailable ? 'Order' : 'Order partly' %></button></div>
+        <details class="mt-s"><summary class="small muted" style="cursor:pointer">Price details</summary>
+          <% for (const l of o.lines) { %><div class="row between small mt-s"><span><%= l.item.name %> × <%= l.available %><%= l.full ? '' : ` (of ${l.item.quantity})` %></span><span><%= l.price == null ? 'Not available' : money(l.price * l.available) %></span></div><% } %></details>
+      </article>
+    <% }) %>
+  </div>
+  <div class="grid g-main mt">
+    <section class="card">
+      <div class="card-h"><h2>Order tracking</h2><% if (active) { %><%- pill(active.pharmacy) %><% } %></div>
+      <% if (!active) { %><div class="empty small">No active order. Your next order will appear here.</div><% } else {
+        const FLOW = ['received','preparing','ready','out_for_delivery','delivered']; const at = FLOW.indexOf(active.status); %>
+        <div class="stepper"><% FLOW.forEach((s, i) => { %><div class="st <%= i <= at ? 'done' : 'todo' %>"><i><%- icon(i < 3 ? 'shield' : 'pill', 20) %></i><%= ['Received','Preparing','Ready','Out for delivery','Delivered'][i] %></div><% }) %></div>
+        <a class="btn ghost block mt" href="/patient/orders/<%= active.id %>">Track <%= code(active.id) %></a>
+      <% } %>
+    </section>
+    <section class="card"><h2 style="margin-bottom:14px">Payment</h2>
+      <label class="item" style="cursor:pointer"><input type="radio" name="payment_method" value="online"><b class="grow">Online payment</b><%- pill('Available') %></label>
+      <label class="item" style="cursor:pointer"><input type="radio" name="payment_method" value="cod" checked><b class="grow">Cash on delivery</b><%- pill('Selected', 'green') %></label>
+      <label class="f mt">Delivery address<input name="delivery_address" value="<%= profile.address || '' %>" required></label>
+      <p class="muted small">Pharmacies cannot change your doctor's prescription.</p>
+    </section>
+  </div>
+</form>
+<% } %>
+<%- include('../partials/bottom') %>

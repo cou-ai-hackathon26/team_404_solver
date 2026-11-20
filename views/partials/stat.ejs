@@ -1,0 +1,6 @@
+<a class="stat" href="<%= s.href || '#' %>">
+  <div class="top"><span class="tile <%= s.tile %>"><%- icon(s.icon, 24) %></span><%- sparkline(s.trend, s.color) %></div>
+  <span class="lbl"><%= s.label %></span>
+  <span class="num"><%= s.value %></span>
+  <span class="sub"><%= s.sub %></span>
+</a>

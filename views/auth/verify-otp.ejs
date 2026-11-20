@@ -1,0 +1,23 @@
+<%- include('../partials/auth-top') %>
+<div class="auth-card">
+  <span class="steps-mini">
+    <% if (purpose === 'register') { %><span class="ok">1 Your details</span><span class="on">2 Verify <%= channel === 'sms' ? 'phone' : 'email' %></span><span>3 Log in</span>
+    <% } else { %><span class="ok">Step 2 of 2</span><% } %>
+  </span>
+  <h1 style="font-size:26px"><%= purpose === 'register' ? (channel === 'sms' ? 'Verify your phone number' : 'Verify your email') : 'Enter verification code' %></h1>
+  <p class="sub">We sent a 6-digit code <%= channel === 'sms' ? 'by SMS to ' + phone : 'to ' + email %>. It expires in <%= expiry %> minutes.</p>
+  <% if (devOtp) { %><div class="alert info small">Development mode: your code is <code><%= devOtp %></code> (also printed in the VS Code terminal when real email/SMS is not set up).</div><% } %>
+  <form method="post" action="/verify-otp" id="otp-form">
+    <%- include('../partials/csrf') %>
+    <input type="hidden" name="code" id="otp-code">
+    <div class="otp-boxes" data-otp="#otp-code">
+      <% for (let i = 0; i < 6; i++) { %><input inputmode="numeric" maxlength="1" autocomplete="<%= i === 0 ? 'one-time-code' : 'off' %>" aria-label="Digit <%= i + 1 %>"><% } %>
+    </div>
+    <div class="row between" style="margin-top:22px">
+      <button class="link" form="resend-form" style="text-decoration:none;color:var(--muted);font-weight:500">Resend<span data-countdown="<%= wait %>"></span></button>
+      <button class="btn lg"><%= purpose === 'register' ? 'Verify' : 'Continue' %></button>
+    </div>
+  </form>
+  <form method="post" action="/resend-otp" id="resend-form"><%- include('../partials/csrf') %></form>
+</div>
+<%- include('../partials/auth-bottom') %>

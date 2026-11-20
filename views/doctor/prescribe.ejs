@@ -1,0 +1,33 @@
+<%- include('../partials/top') %>
+<form method="post" action="/doctor/appointments/<%= a.id %>/prescribe"><%- include('../partials/csrf') %>
+<div class="page-h"><div><h1>New prescription</h1><p>Consultation on <%= a.proposed_time ? shortDate(a.proposed_time) : 'today' %> · <%= user.subtitle %></p></div><%- existing ? pill('Already sent once', 'green') : pill('Draft', 'amber') %></div>
+<section class="card soft"><div class="row nowrap"><%- avatar(a.patient_name, 'lg', a.patient_id) %><div class="grow"><h2><%= a.patient_name %></h2><span class="muted">Age <%= a.age ?? '—' %> · <%= (a.reason || '').slice(0, 70) %> · Verified account</span></div><%- access ? pill('Report access: approved', 'green') : pill('Report access: not shared', 'gray') %></div></section>
+<div class="grid g-main mt">
+  <div class="stack">
+    <section class="card"><div class="card-h"><h2>Medicines</h2><button type="button" class="btn ghost sm" data-add-row="#med-rows"><%- icon('plus', 16) %>Add medicine</button></div>
+      <table class="tbl"><thead><tr><th>Medicine</th><th>Dose</th><th>Frequency</th><th>Duration (days)</th></tr></thead>
+        <tbody id="med-rows"><% for (let r = 0; r < 3; r++) { %><tr>
+          <td><select name="medicine_id" style="margin:0"><option value="">Choose…</option><% for (const m of medicines) { %><option value="<%= m.id %>"><%= m.name %> <%= m.strength %><%= m.rx_required ? ' (Rx)' : '' %></option><% } %></select></td>
+          <td><input name="dose" placeholder="1 tablet" style="margin:0"></td>
+          <td><select name="frequency" style="margin:0"><% for (const f of FREQUENCIES) { %><option><%= f %></option><% } %></select></td>
+          <td><input name="duration" type="number" min="1" max="365" value="7" style="margin:0"></td></tr><% } %></tbody></table>
+      <p class="muted small mt-s">Quantity is worked out from frequency × days. Pharmacies can supply less, never more, and cannot edit the prescription.</p>
+    </section>
+    <section class="card"><label class="f">Diagnosis and doctor notes<textarea name="diagnosis" placeholder="e.g. Suspected angina. Avoid heavy exertion until test results are reviewed."><%= a.consultation_notes || '' %></textarea></label>
+      <label class="f">Advice (optional)<input name="advice" placeholder="e.g. Follow up after reports"></label></section>
+  </div>
+  <div class="stack">
+    <section class="card"><h2 style="margin-bottom:14px">Prescribe tests</h2>
+      <div style="max-height:360px;overflow:auto">
+      <% for (const t of catalog) { const on = prescribed.includes(t.id); %><label class="item" style="cursor:pointer;padding:10px 12px"><input type="checkbox" name="test_ids" value="<%= t.id %>" <%= on ? 'checked disabled' : '' %> style="width:18px;height:18px"><b class="grow"><%= t.name %></b><% if (on) { %><%- pill('Prescribed', 'green') %><% } else { %><span class="muted small"><%= t.category %></span><% } %></label><% } %></div>
+      <input name="test_notes" placeholder="Instructions, e.g. fasting 10 to 12 hours" style="margin-top:10px">
+      <p class="muted small mt-s">Prescribed tests appear in the patient's Medical Tests section automatically.</p></section>
+    <section class="card soft"><h2 style="margin-bottom:12px">Digital prescription</h2>
+      <div class="item" style="background:#fff;display:block"><b><%= user.full_name %> · <%= user.subtitle %></b><div class="meta"><%= fmtDate(new Date()) %> · <%= a.patient_name %></div>
+        <% if (existingItems.length) { %><div class="meta mt-s">Last sent: <%= existingItems.map(i => i.name).join(', ') %></div><% } %></div>
+      <button class="btn block lg mt-s"><%- icon('send', 18) %>Sign and send to patient</button>
+      <p class="muted small mt-s">Pharmacies can process this prescription but cannot change it.</p></section>
+  </div>
+</div>
+</form>
+<%- include('../partials/bottom') %>
