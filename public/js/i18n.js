@@ -170,25 +170,28 @@
   });
 
   // ---------- the switch button ----------
+  const GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>';
+  // The button always shows the language the page is in now: "English" or "বাংলা".
   const updateButtons = () => {
     document.querySelectorAll('[data-lang-toggle]').forEach((b) => {
       b.setAttribute('data-no-i18n', '');
-      b.innerHTML = lang === 'bn'
-        ? '<span class="lt-ic">A</span><span>English</span>'
-        : '<span class="lt-ic">অ</span><span>বাংলা</span>';
-      b.title = lang === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন (Switch to Bangla)';
-      b.setAttribute('aria-label', b.title);
+      if (!b.querySelector('.lt-label')) b.innerHTML = `<span class="lt-globe">${GLOBE}</span><span class="lt-label"></span><span class="lt-switch" aria-hidden="true"></span>`;
+      const bn = lang === 'bn';
+      b.classList.toggle('is-bn', bn);
+      b.querySelector('.lt-label').textContent = bn ? 'বাংলা' : 'English';
+      const tip = bn ? 'Switch to English' : 'বাংলায় দেখুন (Switch to Bangla)';
+      b.title = tip; b.setAttribute('aria-label', tip); b.setAttribute('aria-pressed', bn ? 'true' : 'false');
     });
   };
 
   const ensureButton = () => {
     if (document.querySelector('[data-lang-toggle]')) return;
-    // Pages without a top bar (login, register…) get a floating button.
+    // Any page without the button in its markup gets a floating one in the top-right corner.
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'lang-toggle floating';
     b.setAttribute('data-lang-toggle', '');
-    document.body.appendChild(b);
+    document.body.prepend(b);
   };
 
   document.addEventListener('click', (e) => {
