@@ -6,17 +6,21 @@ Stack: Node.js 22 + Express + EJS (server-rendered), built-in `node:sqlite` data
 
 ---
 
-## 1. Run it in VS Code
+## 1. Run it
+
+**Easiest (Windows):** unzip, then double-click **`START.bat`**. It installs everything the first time, asks once for your Gmail App Password (paste it and press Enter), sends you a test email, starts the app and opens http://localhost:3000.
+
+**In VS Code:**
 
 **Requirement:** Node.js **22.13 or newer** (check with `node -v`). Download the LTS version from https://nodejs.org.
 
-1. Unzip `mediconnect.zip` and open the `mediconnect` folder in VS Code (*File → Open Folder*).
+1. Unzip `mediconnect.zip` (right-click → *Extract All*) and open the extracted `mediconnect` folder, the one that contains `package.json`, in VS Code (*File → Open Folder*).
 2. Open the terminal (*Terminal → New Terminal*) and run:
    ```bash
    npm install
    npm start
    ```
-   `npm install` also creates your `.env` file.
+   Then put your email and App Password in `.env` (section 2).
 3. Open **http://localhost:3000** and log in with a demo account below (email + password, no code needed).
 
 The database is created and filled with demo data on the first start. A database from an older version is backed up automatically and rebuilt.
@@ -25,23 +29,44 @@ The database is created and filled with demo data on the first start. A database
 |---|---|
 | `npm run dev` | Start with auto-restart when you edit files |
 | `npm run reset` | Delete all data and reload the demo data |
+| `npm run mailtest` | Send yourself a test email and show what is wrong if it fails |
 | `npm test` | End-to-end test of every portal and feature (128 checks, temporary database) |
 
 Debugging: press **F5** and choose *Run MediConnect (debug)*.
 
 ---
 
+
+## Language switch (English / বাংলা)
+
+Every page has a **বাংলা / English** button in the top-right corner (on the login and register pages it floats in the top-right corner).
+
+- Click **বাংলা** to see the whole portal in Bangla: menus, buttons, forms, placeholders, messages, notifications, statuses, dates and units.
+- Click **English** to switch back.
+- The choice is remembered in the browser, so every page and the next visit open in the same language.
+- Nothing on the server changes, so all features work exactly the same in both languages. Names, chat messages and other text that users type are shown as written.
+
+Files: `public/js/i18n.js` (the switch), `public/js/i18n-bn.js` (the Bangla dictionary, about 2,000 phrases), `public/js/i18n-boot.js` (avoids a flash of English when Bangla is selected). To add or fix a translation, edit `i18n-bn.js`: the key is the exact English text and the value is the Bangla text.
+
 ## 2. Real email codes from your Gmail (one-time setup)
 
-Verification codes are sent **once, at registration**. Patients, doctors and diagnostic centers get the code by **email**; medical shops and ambulances get it by **SMS** to their phone. After that, everyone logs in with just email and password.
+Verification codes are sent **once, at registration** (and for "Forgot password"). Patients, doctors and diagnostic centers get the code by **email**. Medical shops and ambulances get it by **SMS**; until real SMS is set up, their code is **also emailed** to them. After that, everyone logs in with just email and password.
 
-`.env` is already set to send from **oliveahmmad96@gmail.com**. Gmail needs an *App Password*:
+You only fill in **two lines** at the top of `.env` (the file next to `package.json`):
 
-1. Open https://myaccount.google.com/security and turn on **2-Step Verification**.
-2. Open https://myaccount.google.com/apppasswords, create a password named "MediConnect" and copy the 16 letters.
-3. Paste it in `.env`: `SMTP_PASS=abcdabcdabcdabcd`, save, and restart with `npm start`.
+```env
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=abcd efgh ijkl mnop
+```
 
-The terminal then says `Email: sending real emails from oliveahmmad96@gmail.com`, and codes arrive in the inbox of whatever email address someone registers with. While `SMTP_PASS` is empty (or if Gmail rejects the login), codes are printed in the VS Code terminal and shown on the page, so the app still works.
+1. Turn on **2-Step Verification**: https://myaccount.google.com/signinoptions/twosv
+2. Create an **App Password** (name it "MediConnect"): https://myaccount.google.com/apppasswords. Copy the 16 letters into `SMTP_PASS` (spaces are fine). Your normal Gmail password does **not** work.
+3. Save `.env`, stop the server (Ctrl+C) and run `npm start` again.
+4. Check it: `npm run mailtest` sends a test email to yourself and says exactly what is wrong if it fails.
+
+The terminal then says `Email: ON. Verification codes are emailed from ...`, and codes arrive in the inbox of whatever address someone registers with (tell users to check Spam too). Gmail settings (smtp.gmail.com, port 465) are filled in automatically; if your network blocks port 465 the app switches to 587 by itself. While the email is not set up or fails, codes are printed in the VS Code terminal and shown on the page, so sign-up still works.
+
+> বাংলায়: `.env` ফাইলের একদম উপরে শুধু `SMTP_USER` (তোমার Gmail) আর `SMTP_PASS` (Google-এর ১৬ অক্ষরের App Password) বসাও, সেভ করো, সার্ভার আবার চালু করো। তারপর `npm run mailtest` দিয়ে পরীক্ষা করো।
 
 **SMS:** with `SMS_PROVIDER=console` the code is printed in the terminal. For real SMS in Bangladesh set `SMS_PROVIDER=bulksmsbd`, `SMS_API_KEY` and `SMS_SENDER_ID` from bulksmsbd.net (or use `twilio` with the Twilio settings).
 
@@ -118,7 +143,27 @@ tests/smoke.js
 ## 7. Troubleshooting
 
 - **Node too old / `node:sqlite` missing** → install Node.js 22 LTS.
-- **Gmail: “Invalid login”** → use an App Password, not your normal Gmail password; 2-Step Verification must be on.
+- **Email not arriving** → run `npm run mailtest`; it prints the exact problem and fix. Check the Spam folder too.
+- **Gmail: “Invalid login” / EAUTH** → use an App Password, not your normal Gmail password; 2-Step Verification must be on. University or office Google accounts may block it: use a personal Gmail.
+- **App Password page says “not available”** → 2-Step Verification is off, or the account is a school/work account that does not allow it.
+- **Project folder inside another folder** (`mediconnect\mediconnect`) → open and run the folder that contains `package.json`.
 - **No location** → allow location in the browser; on `http://localhost` it is allowed.
 - **No voice** → click anywhere on the page once (browsers block sound until you interact) and use “Test voice”.
 - **Fresh demo data** → `npm run reset`.
+
+---
+
+## MCP server (for AI agents)
+
+MediConnect also runs as an **MCP server**, so any MCP client (Claude Desktop, Cursor, another agent) can use its read-only AI tools. No patient records are exposed.
+
+```bash
+npm run mcp
+```
+
+Tools: `find_specialist` (Bangla/English/Banglish symptoms → specialties + emergency red flags), `search_doctors` (verified doctors ranked by experience, availability, distance and fee), `first_aid` (bilingual first-aid knowledge base), `list_specialties`. Transport: stdio.
+
+Claude Desktop config (`claude_desktop_config.json`):
+```json
+{ "mcpServers": { "mediconnect": { "command": "node", "args": ["C:/path/to/mediconnect/mcp/server.js"] } } }
+```

@@ -37,16 +37,15 @@ const clean = (body) => Object.fromEntries(Object.entries(body).map(([k, v]) => 
 
 const channelOf = (user) => (['pharmacy', 'ambulance'].includes(user.role) ? 'sms' : 'email');
 async function startOtp(req, user, purpose, channel = 'email') {
-  const { code } = await otp.issue(user, purpose, channel);
-  req.session.pendingOtp = { userId: user.id, purpose, email: user.email, phone: user.phone, channel };
-  // The code is shown on the page only while real email/SMS is not set up (console mode).
-  const consoleOnly = channel === 'sms' ? require('../services/sms').consoleMode() : require('../services/mailer').consoleMode();
-  req.session.devOtp = config.isDev && config.devShowOtp && consoleOnly ? code : null;
+  const { code, delivered, emailed } = await otp.issue(user, purpose, channel);
+  req.session.pendingOtp = { userId: user.id, purpose, email: user.email, phone: user.phone, channel, emailed: Boolean(emailed) };
+  // The code is shown on the page only while it could not be delivered (email/SMS not set up or failing).
+  req.session.devOtp = config.isDev && config.devShowOtp && !delivered ? code : null;
 }
 const logoutEverywhere = (userId) => db.run("DELETE FROM sessions WHERE json_extract(data, '$.userId') = ?", userId);
 const otpView = (req, extra = {}) => ({
   title: 'Verify code', email: mask(req.session.pendingOtp.email), purpose: req.session.pendingOtp.purpose,
-  channel: req.session.pendingOtp.channel || 'email', phone: maskPhone(req.session.pendingOtp.phone),
+  channel: req.session.pendingOtp.channel || 'email', phone: maskPhone(req.session.pendingOtp.phone), emailed: req.session.pendingOtp.emailed,
   devOtp: req.session.devOtp, expiry: config.otp.expiryMinutes,
   wait: req.session.pendingOtp.userId ? otp.cooldownRemaining(req.session.pendingOtp.userId, req.session.pendingOtp.purpose) : 0, ...extra,
 });
@@ -133,7 +132,7 @@ router.post('/register/:role(patient|doctor|center|pharmacy|ambulance)', limiter
   });
   audit(req, 'account.registered', { entity: 'user', entityId: user.id, details: { role }, actor: user });
   await startOtp(req, user, 'register', R.channel);
-  req.flash('success', R.channel === 'sms' ? `We sent a 6-digit code by SMS to ${maskPhone(user.phone)}.` : `We sent a 6-digit code to ${mask(user.email)}.`);
+  req.flash('success', R.channel === 'sms' ? `We sent a 6-digit code by SMS to ${maskPhone(user.phone)}${req.session.pendingOtp.emailed ? ` and to ${mask(user.email)}` : ''}.` : `We sent a 6-digit code to ${mask(user.email)}.`);
   res.redirect('/verify-otp');
 }));
 

@@ -11,6 +11,7 @@ const { classifySpecialties } = require('./recommender');
 const reminders = require('./reminders');
 const health = require('./health');
 const { adviceFor } = require('./firstaid');
+const { correctiveRetrieve } = require('./retrieval');
 
 const EMERGENCY = [
   'chest pain', 'can\'t breathe', 'cannot breathe', 'difficulty breathing', 'unconscious', 'fainted', 'seizure',
@@ -63,7 +64,7 @@ Rules you must follow:
 - If anything sounds like an emergency, tell them to call 999 or go to the nearest emergency department now.
 - Point to MediConnect pages when useful: Find a Doctor (AI), Appointments, Medical Tests, Medicine Reminders, Order Medicine, Health Status, Blood Bank.`;
 
-async function llmReply(userId, message, ctx) {
+async function llmReply(userId, message, ctx, aid) {
   const history = db
     .all('SELECT role, body FROM chat_messages WHERE user_id = ? ORDER BY id DESC LIMIT 10', userId)
     .reverse()
@@ -71,14 +72,15 @@ async function llmReply(userId, message, ctx) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 20_000);
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(`${process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com'}/v1/messages`, {
       method: 'POST',
       signal: ctrl.signal,
       headers: { 'content-type': 'application/json', 'x-api-key': config.anthropicKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: config.anthropicModel,
         max_tokens: 400,
-        system: `${SYSTEM}\n\nPatient records:\n${contextText(ctx)}`,
+        system: `${SYSTEM}\n\nPatient records:\n${contextText(ctx)}` +
+          (aid ? `\n\nRetrieved first-aid knowledge (base your advice on it; reply in the user's language):\n${aid.en}\nSuggested specialist: ${aid.specialty}` : ''),
         messages: [...history, { role: 'user', content: message }],
       }),
     });
@@ -157,7 +159,9 @@ async function reply(user, message) {
   }
   const ctx = context(user.id);
   if (config.anthropicKey) {
-    const text = await llmReply(user.id, message, ctx);
+    // Retrieve the matching first-aid entry; if the wording matches nothing, rewrite the query and retry.
+    const { result: aid } = await correctiveRetrieve(message, adviceFor);
+    const text = await llmReply(user.id, message, ctx, aid);
     if (text) return { flagged: false, text, ai: true };
   }
   return { flagged: false, text: ruleReply(message, ctx) };

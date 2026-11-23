@@ -13,9 +13,12 @@
     "dev": "node --disable-warning=ExperimentalWarning --watch src/server.js",
     "seed": "node --disable-warning=ExperimentalWarning src/seed.js",
     "reset": "node --disable-warning=ExperimentalWarning src/seed.js --reset",
-    "test": "node tests/smoke.js"
+    "test": "node tests/smoke.js",
+    "mailtest": "node --disable-warning=ExperimentalWarning scripts/mailtest.js",
+    "mcp": "node --disable-warning=ExperimentalWarning mcp/server.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
@@ -25,7 +28,8 @@
     "helmet": "^8.0.0",
     "leaflet": "^1.9.4",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^6.9.16",
+    "zod": "^4.6.7"
   },
   "optionalDependencies": {
     "tesseract.js": "^5.1.1"

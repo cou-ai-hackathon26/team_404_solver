@@ -4,6 +4,16 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true
 process.env.TZ = process.env.TZ || 'Asia/Dhaka';
 
 const int = (v, d) => (v === undefined || v === '' ? d : parseInt(v, 10));
+// A value still holding the template's placeholder counts as not set.
+const val = (v) => {
+  const s = String(v ?? '').trim().replace(/^["']|["']$/g, '').trim();
+  return /^(PASTE_|YOUR[-_ ]|your[-_ ]|xxx)/i.test(s) || /@example\.com$/i.test(s) ? '' : s;
+};
+// Email: only the address and its App Password are required; Gmail settings are filled in by default.
+const mailUser = val(process.env.SMTP_USER || process.env.EMAIL_USER);
+const mailPass = val(process.env.SMTP_PASS || process.env.EMAIL_APP_PASSWORD).replace(/\s+/g, '');
+const mailHost = val(process.env.SMTP_HOST) || (mailUser ? 'smtp.gmail.com' : '');
+const mailPort = int(val(process.env.SMTP_PORT), mailHost === 'smtp.gmail.com' ? 465 : 587);
 const ROOT = path.join(__dirname, '..');
 
 const config = {
@@ -14,13 +24,15 @@ const config = {
   sessionSecret: process.env.SESSION_SECRET || 'dev-only-insecure-secret',
   sessionTimeoutMinutes: int(process.env.SESSION_TIMEOUT_MINUTES, 30),
   smtp: {
-    host: process.env.SMTP_HOST || '',
-    port: int(process.env.SMTP_PORT, 587),
-    secure: String(process.env.SMTP_SECURE).toLowerCase() === 'true',
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-    from: process.env.MAIL_FROM || (process.env.SMTP_USER ? `MediConnect <${process.env.SMTP_USER}>` : 'MediConnect <no-reply@mediconnect.local>'),
+    host: mailHost,
+    port: mailPort,
+    secure: val(process.env.SMTP_SECURE) ? val(process.env.SMTP_SECURE).toLowerCase() === 'true' : mailPort === 465,
+    user: mailUser,
+    pass: mailPass,
+    from: val(process.env.MAIL_FROM) || (mailUser ? `MediConnect <${mailUser}>` : 'MediConnect <no-reply@mediconnect.local>'),
   },
+  // While SMS is not set up, pharmacy and ambulance codes are emailed as well, so every code reaches an inbox.
+  smsEmailCopy: String(process.env.SMS_EMAIL_COPY ?? 'true').toLowerCase() === 'true',
   sms: {
     provider: (process.env.SMS_PROVIDER || 'console').toLowerCase(), // console | bulksmsbd | twilio
     apiKey: process.env.SMS_API_KEY || '',

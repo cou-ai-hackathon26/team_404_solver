@@ -5,7 +5,7 @@
     <% } else { %><span class="ok">Step 2 of 2</span><% } %>
   </span>
   <h1 style="font-size:26px"><%= purpose === 'register' ? (channel === 'sms' ? 'Verify your phone number' : 'Verify your email') : 'Enter verification code' %></h1>
-  <p class="sub">We sent a 6-digit code <%= channel === 'sms' ? 'by SMS to ' + phone : 'to ' + email %>. It expires in <%= expiry %> minutes.</p>
+  <p class="sub">We sent a 6-digit code <%= channel === 'sms' ? 'by SMS to ' + phone + (typeof emailed !== 'undefined' && emailed ? ' and to ' + email : '') : 'to ' + email %>. It expires in <%= expiry %> minutes.</p>
   <% if (devOtp) { %><div class="alert info small">Development mode: your code is <code><%= devOtp %></code> (also printed in the VS Code terminal when real email/SMS is not set up).</div><% } %>
   <form method="post" action="/verify-otp" id="otp-form">
     <%- include('../partials/csrf') %>

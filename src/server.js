@@ -69,8 +69,15 @@ require('./services/reminders').start();
 
 app.listen(config.port, () => {
   console.log(`\nMediConnect running at http://localhost:${config.port}`);
-  if (consoleMode()) console.log(config.smtp.user && !config.smtp.pass ? `Email: add the Gmail App Password for ${config.smtp.user} as SMTP_PASS in .env to send real emails. Until then codes are printed here.` : 'Email: console mode (no SMTP configured). OTP codes are printed here.');
-  else verifyConnection().then((ok) => console.log(ok ? `Email: sending real emails from ${config.smtp.user || config.smtp.host}` : 'Email: SMTP login failed. Codes will be printed here until it is fixed (see README).'));
+  if (consoleMode()) {
+    console.log(config.smtp.user && !config.smtp.pass
+      ? `Email: OFF. Put the 16-letter Google App Password for ${config.smtp.user} in .env as SMTP_PASS, then restart. Until then codes are printed here.`
+      : 'Email: OFF. Put your email (SMTP_USER) and its App Password (SMTP_PASS) in .env, then restart. Until then codes are printed here.');
+  } else {
+    verifyConnection().then((r) => console.log(r.ok
+      ? `Email: ON. Verification codes are emailed from ${config.smtp.user || config.smtp.host} (port ${r.port}).`
+      : `Email: login FAILED (${r.error}).\n  Fix: ${r.advice}\n  Codes are printed here until it is fixed. Test with: npm run mailtest`));
+  }
   console.log(`SMS: ${sms.consoleMode() ? 'console mode (codes printed here)' : config.sms.provider}`);
   console.log(`Health Assistant: ${config.anthropicKey ? 'Claude API' : 'built-in answers (set ANTHROPIC_API_KEY to use Claude)'}`);
   console.log('Demo logins are listed in README.md (password for all: Password123)\n');

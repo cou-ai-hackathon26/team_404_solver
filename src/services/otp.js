@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const db = require('../db');
 const config = require('../config');
-const { sendMail } = require('./mailer');
+const { sendMail, consoleMode } = require('./mailer');
 const { sendSms } = require('./sms');
 
 const PURPOSE_TEXT = {
@@ -51,20 +51,24 @@ async function issue(user, purpose, channel = 'email') {
     expires,
     channel
   );
+  const mailText =
+    `Hello ${user.full_name},\n\n` +
+    `Use this code to ${PURPOSE_TEXT[purpose]}: ${code}\n\n` +
+    `It expires in ${config.otp.expiryMinutes} minutes. If you did not request it, ignore this email ` +
+    `and consider changing your password.\n\nMediConnect`;
+  const subject = `Your MediConnect verification code: ${code}`;
   if (channel === 'sms') {
-    await sendSms(user.phone, `MediConnect code: ${code}. Use it to ${PURPOSE_TEXT[purpose]}. Expires in ${config.otp.expiryMinutes} min. Do not share it.`);
-    return { code };
+    const r = await sendSms(user.phone, `MediConnect code: ${code}. Use it to ${PURPOSE_TEXT[purpose]}. Expires in ${config.otp.expiryMinutes} min. Do not share it.`);
+    // Until a real SMS provider is set up, the same code is also emailed, so it still reaches the user.
+    let emailed = false;
+    if (r.console && config.smsEmailCopy && user.email && !consoleMode()) {
+      const m = await sendMail({ to: user.email, subject, text: mailText });
+      emailed = !m.console;
+    }
+    return { code, delivered: !r.console || emailed, emailed };
   }
-  await sendMail({
-    to: user.email,
-    subject: `Your MediConnect verification code: ${code}`,
-    text:
-      `Hello ${user.full_name},\n\n` +
-      `Use this code to ${PURPOSE_TEXT[purpose]}: ${code}\n\n` +
-      `It expires in ${config.otp.expiryMinutes} minutes. If you did not request it, ignore this email ` +
-      `and consider changing your password.\n\nMediConnect`,
-  });
-  return { code };
+  const m = await sendMail({ to: user.email, subject, text: mailText });
+  return { code, delivered: !m.console };
 }
 
 /** Verify a code. Returns { ok: true } or { ok: false, error }. */
