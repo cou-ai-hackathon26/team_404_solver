@@ -24,6 +24,7 @@
         <%- icon('search', 18) %><input name="q" placeholder="Search doctors, reports, medicines..." value="<%= typeof q === 'string' ? q : '' %>" aria-label="Search">
       </form>
       <div class="top-right">
+        <button type="button" class="lang-toggle" data-lang-toggle data-no-i18n aria-label="Switch language"><span class="lt-ic">অ</span><span>বাংলা</span></button>
         <span class="date-chip"><%= dateChip() %></span>
         <div class="notif-wrap">
           <button class="bell" type="button" data-bell aria-label="Notifications"><%- icon('bell', 21) %><% if (unread) { %><span class="dot" id="unread-dot"></span><% } %></button>
