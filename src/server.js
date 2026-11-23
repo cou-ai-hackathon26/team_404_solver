@@ -22,11 +22,13 @@ app.use(helmet({
       'script-src': ["'self'"],
       'style-src': ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
       'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
-      'img-src': ["'self'", 'data:', 'https://*.tile.openstreetmap.org', 'https://tile.openstreetmap.org'],
+      'img-src': ["'self'", 'data:', 'https://*.basemaps.cartocdn.com', 'https://*.tile.openstreetmap.org', 'https://tile.openstreetmap.org'],
       'connect-src': ["'self'"],
       'media-src': ["'self'", 'data:'],
     },
   },
+  // Map tile servers (OpenStreetMap) block requests that carry no Referer header, so send the site origin.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(express.json({ limit: '100kb' }));
