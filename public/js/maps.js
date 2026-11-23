@@ -39,16 +39,11 @@
     const pts = JSON.parse(el.dataset.points || '[]').filter((p) => p.lat != null && p.lng != null);
     const center = pts[0] || { lat: 23.7465, lng: 90.376 }; // Dhaka
     const map = L.map(el, { scrollWheelZoom: false }).setView([center.lat, center.lng], 13);
-    // Map tiles: CARTO's free OpenStreetMap basemap first; if it fails, switch to the standard OpenStreetMap tiles.
-    const ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-    let tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd', attribution: ATTR }).addTo(map);
-    let tileErrors = 0;
-    tiles.on('tileerror', () => {
-      tileErrors += 1;
-      if (tileErrors !== 4) return;
-      map.removeLayer(tiles);
-      tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
-    });
+    // Map tiles: Esri World Street Map (free, no API key, no Referer rules), so the map works on any host.
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
     map.attributionControl.setPrefix('Leaflet');
     const markers = {};
     let line = null;

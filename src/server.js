@@ -22,7 +22,7 @@ app.use(helmet({
       'script-src': ["'self'"],
       'style-src': ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
       'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
-      'img-src': ["'self'", 'data:', 'https://*.basemaps.cartocdn.com', 'https://*.tile.openstreetmap.org', 'https://tile.openstreetmap.org'],
+      'img-src': ["'self'", 'data:', 'https://server.arcgisonline.com', 'https://*.tile.openstreetmap.org', 'https://tile.openstreetmap.org'],
       'connect-src': ["'self'"],
       'media-src': ["'self'", 'data:'],
     },
