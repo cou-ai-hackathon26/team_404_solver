@@ -13,7 +13,7 @@ try {
 }
 
 fs.mkdirSync(path.dirname(config.dbFile), { recursive: true });
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 5;
 // A database from an older version of MediConnect is backed up and rebuilt with fresh demo data.
 if (fs.existsSync(config.dbFile)) {
   const old = new DatabaseSync(config.dbFile);
@@ -35,7 +35,7 @@ const NOW = "(strftime('%Y-%m-%dT%H:%M:%fZ','now'))";
 raw.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  role TEXT NOT NULL CHECK (role IN ('patient','doctor','center','pharmacy','ambulance','admin')),
+  role TEXT NOT NULL CHECK (role IN ('patient','doctor','center','pharmacy','ambulance','admin','caregiver')),
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
   password_hash TEXT NOT NULL,
   full_name TEXT NOT NULL,
@@ -389,6 +389,32 @@ CREATE TABLE IF NOT EXISTS payments (
   status TEXT NOT NULL DEFAULT 'success', created_at TEXT NOT NULL DEFAULT ${NOW}
 );
 
+-- Caregiver proxy: a patient lets another account (family member, carer) see and act on their timeline.
+CREATE TABLE IF NOT EXISTS caregiver_links (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  patient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  caregiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  relationship TEXT,
+  can_act INTEGER NOT NULL DEFAULT 1,
+  share_reminders INTEGER NOT NULL DEFAULT 1, share_vitals INTEGER NOT NULL DEFAULT 1, share_reports INTEGER NOT NULL DEFAULT 1,
+  last_viewed_at TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','declined','revoked')),
+  invited_by INTEGER NOT NULL REFERENCES users(id),
+  consent_at TEXT NOT NULL,
+  responded_at TEXT, revoked_at TEXT, revoked_by INTEGER REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT ${NOW}
+);
+-- Care notes: short messages on the shared timeline between the patient and their caregivers.
+CREATE TABLE IF NOT EXISTS care_notes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  patient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT ${NOW}
+);
+CREATE INDEX IF NOT EXISTS idx_care_patient ON caregiver_links(patient_id, status);
+CREATE INDEX IF NOT EXISTS idx_care_caregiver ON caregiver_links(caregiver_id, status);
+
 CREATE INDEX IF NOT EXISTS idx_markers ON health_markers(patient_id, marker, measured_on);
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_appt_patient ON appointments(patient_id);
@@ -397,6 +423,12 @@ CREATE INDEX IF NOT EXISTS idx_reports_patient ON reports(patient_id);
 CREATE INDEX IF NOT EXISTS idx_audit_patient ON audit_log(patient_id);
 CREATE INDEX IF NOT EXISTS idx_dose_due ON dose_logs(status, due_at);
 `);
+
+// Who did it: set when a caregiver marks a dose or logs a reading for the patient.
+for (const [table, col] of [['dose_logs', 'acted_by'], ['health_readings', 'recorded_by'], ['dose_logs', 'caregiver_alerted']]) {
+  const cols = raw.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+  if (!cols.includes(col)) raw.exec(`ALTER TABLE ${table} ADD COLUMN ${col} INTEGER${col === 'caregiver_alerted' ? ' NOT NULL DEFAULT 0' : ' REFERENCES users(id)'}`);
+}
 
 raw.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 

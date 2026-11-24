@@ -10,6 +10,7 @@
       ['center', 'flask', 't-orange', 'Diagnostic Center', 'Receive test bookings and upload reports to patients', 'Email + admin review'],
       ['pharmacy', 'pill', 't-purple', 'Medical Shop', 'Sell medicines, manage live stock and deliver orders', 'Phone SMS + admin review'],
       ['ambulance', 'ambulance', 't-red', 'Ambulance', 'Go online, show your live location and take emergency calls', 'Phone SMS + admin review'],
+      ['caregiver', 'heart', 't-pink', 'Caregiver', 'Look after a parent or family member: their reminders, vitals and reports on one timeline, with their consent', 'Email verification'],
     ]; %>
     <% CARDS.forEach(([role, ic, tile, name, text, verify], i) => { %>
       <a class="role-card" href="/register/<%= role %>" style="--d:<%= i * 70 %>ms">

@@ -1,5 +1,5 @@
 <%- include('../partials/auth-top', { wide: true }) %>
-<% const F = (k) => form[k] || ''; const provider = role !== 'patient'; %>
+<% const F = (k) => form[k] || ''; const provider = !['patient', 'caregiver'].includes(role); %>
 <div class="auth-card wide">
   <span class="steps-mini"><span class="ok"><a href="/register" style="color:inherit">1 Account type</a></span><span class="on">2 <%= R.title %> details</span><span>3 Verify <%= R.channel === 'sms' ? 'phone' : 'email' %></span><% if (provider) { %><span>4 Admin review</span><% } %></span>
   <div class="row nowrap" style="gap:14px;margin-bottom:6px">
@@ -21,6 +21,9 @@
       <label class="f">Phone number<%= R.channel === 'sms' ? ' (code is sent here)' : '' %><input name="phone" value="<%= F('phone') %>" required placeholder="01XXXXXXXXX" autocomplete="tel"></label>
     </div>
 
+    <% if (role === 'caregiver') { %>
+      <div class="note blue" style="margin-bottom:14px"><%- icon('heart', 18) %><div><b>How it works:</b> after you verify your email, the person you look after invites you from their <b>Caregivers &amp; Timeline</b> page using this email. Once you accept, you see their medicine reminders, vitals and reports on one timeline, and can act for them if they allow it.</div></div>
+    <% } %>
     <% if (role === 'patient') { %>
       <div class="fgrid">
         <label class="f">Date of birth<input type="date" name="date_of_birth" value="<%= F('date_of_birth') %>" required></label>
@@ -62,7 +65,7 @@
     <% } %>
 
     <div class="row" style="margin:-4px 0 14px"><input type="hidden" name="lat" value="<%= F('lat') %>"><input type="hidden" name="lng" value="<%= F('lng') %>">
-      <button type="button" class="btn ghost sm" data-geolocate><%- icon('pin', 16) %> Use my current location</button><span class="muted small">Helps show <%= role === 'patient' ? 'the nearest doctors, centers and pharmacies' : 'you to nearby patients' %>.</span></div>
+      <button type="button" class="btn ghost sm" data-geolocate><%- icon('pin', 16) %> Use my current location</button><span class="muted small">Helps show <%= ['patient', 'caregiver'].includes(role) ? 'the nearest doctors, centers and pharmacies' : 'you to nearby patients' %>.</span></div>
 
     <div class="fgrid">
       <label class="f">Password<input type="password" name="password" required minlength="8" autocomplete="new-password"><small>8+ characters with a letter and a number</small></label>

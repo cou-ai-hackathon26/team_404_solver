@@ -1,0 +1,172 @@
+// Drug-interaction safety rules and the "records vs rule" conflict check used by the Health AI chatbot.
+//
+// The chatbot must NOT answer when the patient's own records and a safety rule point in opposite
+// directions, for example:
+//   - the records say the patient is prescribed omeprazole AND clopidogrel (so the records say "take both"),
+//     but the rule says omeprazole makes clopidogrel work less well (the rule says "don't combine");
+//   - the patient asks "can I take ibuprofen?" while the records show aspirin is prescribed;
+//   - the records show metformin is prescribed, but the latest lab report shows high creatinine.
+// In those cases the answer depends on a doctor's judgement, so the bot abstains, explains the conflict
+// and sends the patient to their doctor or pharmacist. Rules are fixed and written here, never decided by AI.
+const db = require('../db');
+
+// Generic name -> words that may appear in records or messages (brands common in Bangladesh, Bangla spellings).
+const DRUGS = {
+  paracetamol: ['paracetamol', 'acetaminophen', 'napa', 'প্যারাসিটামল', 'নাপা'],
+  aspirin: ['aspirin', 'ecosprin', 'disprin', 'অ্যাসপিরিন', 'এসপিরিন', 'ইকোস্প্রিন'],
+  clopidogrel: ['clopidogrel', 'clopid', 'lopirel', 'plavix', 'ক্লোপিডোগ্রেল'],
+  warfarin: ['warfarin', 'warin', 'ওয়ারফারিন'],
+  ibuprofen: ['ibuprofen', 'profen', 'brufen', 'advil', 'আইবুপ্রোফেন', 'ইবুপ্রোফেন'],
+  diclofenac: ['diclofenac', 'clofenac', 'voltalin', 'ডাইক্লোফেনাক'],
+  naproxen: ['naproxen', 'naprosyn', 'ন্যাপ্রোক্সেন'],
+  omeprazole: ['omeprazole', 'seclo', 'losectil', 'ওমিপ্রাজল', 'ওমেপ্রাজল', 'সেকলো'],
+  esomeprazole: ['esomeprazole', 'sergel', 'maxpro', 'ইসোমিপ্রাজল', 'সারজেল'],
+  metformin: ['metformin', 'comet', 'glucophage', 'মেটফরমিন', 'মেটফর্মিন'],
+  losartan: ['losartan', 'angilock', 'osartil', 'লোসার্টান'],
+  spironolactone: ['spironolactone', 'aldactone', 'স্পিরোনোল্যাকটোন'],
+  potassium: ['potassium chloride', 'potassium supplement', 'k-lyte'],
+  sildenafil: ['sildenafil', 'viagra', 'সিলডেনাফিল'],
+  nitroglycerin: ['nitroglycerin', 'glyceryl trinitrate', 'gtn', 'isosorbide', 'nitrocard'],
+  amlodipine: ['amlodipine', 'camlodin', 'amdocal', 'অ্যামলোডিপিন'],
+  simvastatin: ['simvastatin', 'simvas', 'সিমভাস্ট্যাটিন'],
+  levothyroxine: ['levothyroxine', 'thyrox', 'eltroxin', 'লেভোথাইরক্সিন'],
+  calcium: ['calcium carbonate', 'calbo', 'ostocal'],
+  ciprofloxacin: ['ciprofloxacin', 'ciprocin', 'সিপ্রোফ্লক্সাসিন'],
+  tramadol: ['tramadol', 'anadol', 'ট্রামাডল'],
+  sertraline: ['sertraline', 'serlin', 'সারট্রালিন'],
+  fluoxetine: ['fluoxetine', 'prozac', 'ফ্লুক্সেটিন'],
+  cetirizine: ['cetirizine', 'alatrol', 'সেটিরিজিন'],
+};
+const NAME = (g) => g.charAt(0).toUpperCase() + g.slice(1);
+
+// [drug A, drug B, why they should not be combined without a doctor, severity]
+const PAIR_RULES = [
+  ['clopidogrel', 'omeprazole', 'Omeprazole can make clopidogrel work less well, which raises the risk of a heart attack or stroke.', 'high'],
+  ['clopidogrel', 'esomeprazole', 'Esomeprazole can make clopidogrel work less well, which raises the risk of a heart attack or stroke.', 'high'],
+  ['aspirin', 'ibuprofen', 'Ibuprofen with aspirin raises the risk of stomach bleeding and can block aspirin’s heart protection.', 'high'],
+  ['aspirin', 'naproxen', 'Naproxen with aspirin raises the risk of stomach bleeding.', 'high'],
+  ['aspirin', 'diclofenac', 'Diclofenac with aspirin raises the risk of stomach bleeding.', 'high'],
+  ['warfarin', 'aspirin', 'Aspirin with warfarin greatly raises the risk of serious bleeding.', 'high'],
+  ['warfarin', 'ibuprofen', 'Ibuprofen with warfarin greatly raises the risk of serious bleeding.', 'high'],
+  ['warfarin', 'diclofenac', 'Diclofenac with warfarin greatly raises the risk of serious bleeding.', 'high'],
+  ['warfarin', 'naproxen', 'Naproxen with warfarin greatly raises the risk of serious bleeding.', 'high'],
+  ['warfarin', 'ciprofloxacin', 'Ciprofloxacin can make warfarin much stronger and cause bleeding.', 'high'],
+  ['sildenafil', 'nitroglycerin', 'Sildenafil with nitrates can cause a dangerous drop in blood pressure.', 'high'],
+  ['losartan', 'spironolactone', 'Losartan with spironolactone can raise blood potassium to unsafe levels.', 'high'],
+  ['losartan', 'potassium', 'Losartan with potassium supplements can raise blood potassium to unsafe levels.', 'high'],
+  ['tramadol', 'sertraline', 'Tramadol with sertraline can cause serotonin syndrome or seizures.', 'high'],
+  ['tramadol', 'fluoxetine', 'Tramadol with fluoxetine can cause serotonin syndrome or seizures.', 'high'],
+  ['amlodipine', 'simvastatin', 'Amlodipine raises simvastatin levels; above 20 mg simvastatin this risks muscle damage.', 'moderate'],
+  ['levothyroxine', 'calcium', 'Calcium stops levothyroxine from being absorbed if taken at the same time.', 'moderate'],
+];
+
+// [drug, lab marker, threshold, why]  (marker values come from the patient's own lab reports)
+const LAB_RULES = [
+  ['metformin', 'creatinine', 1.5, 'Your latest serum creatinine is high; metformin needs a doctor’s review when kidney function is reduced.'],
+  ['ibuprofen', 'creatinine', 1.3, 'Your latest serum creatinine is high; ibuprofen can harm the kidneys further.'],
+  ['diclofenac', 'creatinine', 1.3, 'Your latest serum creatinine is high; diclofenac can harm the kidneys further.'],
+  ['naproxen', 'creatinine', 1.3, 'Your latest serum creatinine is high; naproxen can harm the kidneys further.'],
+];
+
+// A question about the patient's medicines in general ("which medicines today?", "আমার ওষুধ কি একসাথে খাব?").
+const MED_QUESTION = /\b(medicines?|medications?|tablets?|pills?|capsules?|doses?|drugs?)\b|ওষুধ|ঔষধ|ট্যাবলেট|ক্যাপসুল|ডোজ/i;
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const ALIAS_RE = Object.entries(DRUGS).map(([g, words]) => [g, new RegExp(`(?:^|[^a-z\\u0980-\\u09FF])(?:${words.map(esc).join('|')})(?![a-z])`, 'i')]);
+
+/** Generic drug names found in any text. */
+function drugsIn(text) {
+  const t = ` ${String(text || '').toLowerCase()} `;
+  return ALIAS_RE.filter(([, re]) => re.test(t)).map(([g]) => g);
+}
+
+/** Medicines the patient's own records say they take: recent prescriptions and active reminders. */
+function recordDrugs(patientId) {
+  const since = new Date(Date.now() - 90 * 86400000).toISOString();
+  const rows = db.all(
+    `SELECT COALESCE(m.name, '') || ' ' || IFNULL(m.brand, '') || ' ' || i.raw_name AS text, i.raw_name, m.strength,
+            p.created_at, u.full_name AS doctor
+       FROM prescription_items i JOIN prescriptions p ON p.id = i.prescription_id
+       LEFT JOIN medicines m ON m.id = i.medicine_id LEFT JOIN users u ON u.id = p.doctor_id
+      WHERE p.patient_id = ? AND p.created_at >= ?`, patientId, since);
+  const rem = db.all("SELECT medicine_name AS text, medicine_name AS raw_name, NULL AS strength, created_at, NULL AS doctor FROM reminders WHERE patient_id = ? AND active = 1", patientId);
+  const out = {};
+  for (const r of [...rows, ...rem]) {
+    for (const g of drugsIn(r.text)) {
+      if (out[g] && out[g].doctor) continue;
+      const day = new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      out[g] = { generic: g, doctor: r.doctor, source: r.doctor ? `prescribed by ${r.doctor} on ${day}` : 'in your active medicine reminders' };
+    }
+  }
+  return out;
+}
+
+function latestLabs(patientId) {
+  const rows = db.all(
+    `SELECT marker, value, measured_on FROM health_markers h
+      WHERE patient_id = ? AND measured_on = (SELECT MAX(measured_on) FROM health_markers WHERE patient_id = h.patient_id AND marker = h.marker)`, patientId);
+  return Object.fromEntries(rows.map((r) => [r.marker, r]));
+}
+
+/** Conflicts between the patient's records and the rules, limited to `focus` drugs when given. */
+function conflictsFor(patientId, { mentioned = [], medQuestion = false } = {}) {
+  const rec = recordDrugs(patientId);
+  const labs = latestLabs(patientId);
+  const pool = new Set([...Object.keys(rec), ...mentioned]);
+  const inScope = (g) => mentioned.includes(g) || (medQuestion && !mentioned.length && rec[g]);
+  const found = [];
+  for (const [a, b, why, severity] of PAIR_RULES) {
+    if (!pool.has(a) || !pool.has(b)) continue;
+    if (!(inScope(a) || inScope(b))) continue;
+    // Opposite directions: at least one drug is backed by the patient's own records, while the rule says no.
+    if (!rec[a] && !rec[b]) continue;
+    found.push({ kind: 'pair', drugs: [a, b], why, severity, records: [rec[a], rec[b]].filter(Boolean) });
+  }
+  for (const [drug, marker, limit, why] of LAB_RULES) {
+    const lab = labs[marker];
+    if (!lab || lab.value <= limit || !pool.has(drug) || !inScope(drug)) continue;
+    found.push({ kind: 'lab', drugs: [drug], why, severity: 'high', lab, records: [rec[drug]].filter(Boolean) });
+  }
+  return found;
+}
+
+/**
+ * Should the chatbot refuse to answer this message?
+ * Returns null when it's safe to answer, or { conflicts, ruleOnly } otherwise.
+ * - conflicts: records and a rule disagree -> abstain.
+ * - ruleOnly: the user named two interacting drugs that are not in their records -> answer, but warn.
+ */
+function checkQuestion(patientId, message) {
+  const mentioned = drugsIn(message);
+  const medQuestion = MED_QUESTION.test(message);
+  if (!mentioned.length && !medQuestion) return null;
+  const conflicts = conflictsFor(patientId, { mentioned, medQuestion });
+  if (conflicts.length) return { conflicts };
+  const ruleOnly = PAIR_RULES.filter(([a, b]) => mentioned.includes(a) && mentioned.includes(b)).map(([a, b, why]) => ({ drugs: [a, b], why }));
+  return ruleOnly.length ? { conflicts: [], ruleOnly } : null;
+}
+
+/** Record-vs-rule conflicts among everything the patient currently takes (for the shared timeline). */
+function forPatient(patientId) {
+  return conflictsFor(patientId, { medQuestion: true });
+}
+
+function abstainText(conflicts, bn) {
+  const recLine = (c) => c.records.map((r) => `${NAME(r.generic)} (${r.source})`).join(' and ');
+  if (bn) {
+    return ['⚠️ এই প্রশ্নের উত্তর আমি দিতে পারছি না।',
+      'আপনার নিজের মেডিকেল রেকর্ড আর একটি ওষুধ-মিথস্ক্রিয়ার নিরাপত্তা নিয়ম উল্টো কথা বলছে:',
+      ...conflicts.map((c) => `• রেকর্ড: ${recLine(c) || c.drugs.map(NAME).join(', ')}\n• নিয়ম: ${c.why}${c.lab ? ` (Creatinine ${c.lab.value}, ${c.lab.measured_on})` : ''}`),
+      'এমন অবস্থায় আমি অনুমান করে উত্তর দেব না। পরের ডোজের আগে আপনার ডাক্তার বা ফার্মাসিস্টকে জিজ্ঞেস করুন (Doctor Chat বা Appointments থেকে বার্তা পাঠাতে পারেন)। নিজে থেকে কোনো ওষুধ বন্ধ বা পরিবর্তন করবেন না। বুকে ব্যথা, রক্তপাত বা শ্বাসকষ্ট হলে এখনই ৯৯৯-এ কল করুন।'].join('\n');
+  }
+  return ["⚠️ I can't answer this one safely.",
+    'Your own medical records and a drug-interaction safety rule point in opposite directions:',
+    ...conflicts.map((c) => `• Your records: ${recLine(c) || c.drugs.map(NAME).join(', ')}\n• Safety rule: ${c.why}${c.lab ? ` (creatinine ${c.lab.value} on ${c.lab.measured_on})` : ''}`),
+    "Because of this conflict I won't guess. Please ask your doctor or pharmacist before your next dose (you can message them from Doctor Chat or Appointments). Don't stop or change any medicine on your own. If you have chest pain, bleeding or trouble breathing, call 999 now."].join('\n');
+}
+
+function ruleOnlyText(items, bn) {
+  return items.map((r) => (bn ? `⚠️ সতর্কতা: ${NAME(r.drugs[0])} + ${NAME(r.drugs[1])}: ${r.why} ডাক্তারকে না জিজ্ঞেস করে একসাথে খাবেন না।`
+    : `⚠️ Caution: ${NAME(r.drugs[0])} + ${NAME(r.drugs[1])}: ${r.why} Don't combine them without asking your doctor.`)).join('\n');
+}
+
+module.exports = { DRUGS, PAIR_RULES, LAB_RULES, drugsIn, recordDrugs, latestLabs, conflictsFor, checkQuestion, forPatient, abstainText, ruleOnlyText };

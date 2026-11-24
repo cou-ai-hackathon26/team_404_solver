@@ -216,6 +216,85 @@ async function main() {
     r = await pat.post('/patient/assistant', { message: 'আমার মাথা ব্যথা, কী করব?' }, '/patient/assistant');
     check('Health AI gives first-aid advice in Bangla', /পানি পান করুন/.test(r.text));
 
+    console.log('\nChallenge 2: chatbot abstains when records and a drug-interaction rule disagree');
+    r = await pat.post('/patient/assistant', { message: 'Can I take my omeprazole with clopidogrel?' }, '/patient/assistant');
+    check('Abstains: records (omeprazole + clopidogrel prescribed) vs interaction rule', /answer this one safely/.test(r.text) && /Omeprazole can make clopidogrel work less well/.test(r.text));
+    r = await pat.post('/patient/assistant', { message: 'Can I take ibuprofen for my headache?' }, '/patient/assistant');
+    check('Abstains: asks for ibuprofen while records show aspirin', /answer this one safely/.test(r.text) && /Ibuprofen with aspirin/.test(r.text));
+    r = await pat.post('/patient/assistant', { message: 'আমি কি আজ আমার ওষুধগুলো একসাথে খাব?' }, '/patient/assistant');
+    check('Abstains in Bangla for a general medicine question', /উত্তর আমি দিতে পারছি না/.test(r.text));
+    r = await pat.post('/patient/assistant', { message: 'Can I take paracetamol for fever?' }, '/patient/assistant');
+    check('Still answers when no rule conflicts with the records', r.status === 200 && !/answer this one safely/.test(r.text.split('Can I take paracetamol for fever?').pop()));
+    r = await pat.post('/patient/assistant', { message: 'I have chest pain, can I take ibuprofen?' }, '/patient/assistant');
+    check('Emergency guard still comes first', /Call 999 now/.test(r.text.split('I have chest pain, can I take ibuprofen?').pop()));
+    r = await clients['admin@mediconnect.local'].get('/admin/audit?action=assistant.');
+    check('Abstention written to audit log', /assistant\.abstained/.test(r.text));
+    const sad = new Client(); await sad.login('sadia@mediconnect.local');
+    r = await sad.post('/patient/assistant', { message: 'Can I take ibuprofen?' }, '/patient/assistant');
+    check('Patient with no conflicting records gets an answer', !/answer this one safely/.test(r.text));
+
+    console.log('\nChallenge 1: caregiver proxy on a shared timeline');
+    const rahimId = (await db("SELECT id FROM users WHERE email = 'patient@mediconnect.local'")).id;
+    const kamalId = (await db("SELECT id FROM users WHERE email = 'kamal@mediconnect.local'")).id;
+    const taniaId = (await db("SELECT id FROM users WHERE email = 'caregiver@mediconnect.local'")).id;
+    const cg = new Client(); r = await cg.login('caregiver@mediconnect.local');
+    check('Caregiver account logs in to its own portal', r.url.startsWith('/care') && /Care dashboard/.test(r.text));
+    check('Care dashboard lists everyone she looks after', /Rahim Uddin/.test(r.text) && /Kamal Hasan/.test(r.text));
+    check('Dashboard flags who needs attention', /Needs attention now|Keep an eye on/.test(r.text) && /Medicine safety/.test(r.text));
+    r = await cg.get('/patient');
+    check('Caregiver cannot open the patient portal', r.status === 403 || !r.url.startsWith('/patient'));
+    const kamal = new Client(); await kamal.login('kamal@mediconnect.local');
+    r = await kamal.get(`/care/timeline/${rahimId}`);
+    check('A stranger cannot open the timeline', r.status === 403);
+    r = await cg.get(`/care/timeline/${rahimId}`);
+    check('Shared timeline shows reminders, vitals and reports together', /Today.s doses/.test(r.text) && /Latest vitals/.test(r.text) && /ECG report/.test(r.text) && /Blood pressure/.test(r.text));
+    check('Timeline shows what is new since the last visit', /since your last visit/.test(r.text));
+    check('Timeline shows the medicine safety alert', /Medicine safety alert/.test(r.text));
+    const rep = (r.text.match(/href="(\/files\/report\/\d+)"/) || [])[1];
+    if (rep) { const f = await cg.get(rep); check('Caregiver with report consent can open a report', f.status === 200); }
+    const dose = await db(`SELECT d.id FROM dose_logs d JOIN reminders r ON r.id = d.reminder_id WHERE r.patient_id = ? AND d.status = 'due' ORDER BY d.due_at LIMIT 1`, rahimId);
+    if (dose) {
+      r = await cg.post(`/care/timeline/${rahimId}/dose/${dose.id}/taken`, {}, `/care/timeline/${rahimId}`);
+      check('Caregiver marks a dose taken for the patient', /marked as taken/.test(r.text));
+      check('Dose records who acted', (await db('SELECT acted_by FROM dose_logs WHERE id = ?', dose.id)).acted_by === taniaId);
+    }
+    r = await cg.post(`/care/timeline/${rahimId}/reading`, { kind: 'bp', value1: '128', value2: '82' }, `/care/timeline/${rahimId}`);
+    check('Caregiver logs a vital reading, shown as by the caregiver', /Saved Blood pressure 128\/82/.test(r.text) && /by Tania Rahman \(caregiver\)/.test(r.text));
+    r = await cg.post(`/care/timeline/${rahimId}/note`, { body: 'Evening dose given after dinner.' }, `/care/timeline/${rahimId}`);
+    check('Caregiver adds a care note to the timeline', /Note added/.test(r.text) && /Evening dose given after dinner/.test(r.text));
+    r = await pat.get('/notifications');
+    check('Patient is notified of caregiver actions', /Reading logged by your caregiver/.test(r.text) && /Care note from Tania Rahman/.test(r.text));
+    r = await pat.post('/patient/health', { kind: 'bp', value1: '185', value2: '121' }, '/patient/health');
+    r = await cg.get('/notifications');
+    check('Caregiver is alerted about a dangerous reading', /Urgent reading: Rahim Uddin/.test(r.text));
+    r = await sad.get(`/care/timeline/${rahimId}`);
+    check('View-only caregiver sees only what was shared', /view only/.test(r.text) && !/ECG report/.test(r.text));
+    if (rep) { const f = await sad.get(rep); check('Caregiver without report consent cannot open the report', f.status === 403); }
+    r = await sad.post(`/care/timeline/${rahimId}/reading`, { kind: 'pulse', value1: '80' }, `/care/timeline/${rahimId}`);
+    check('View-only caregiver cannot act', /view only, not to act/.test(r.text));
+    r = await pat.post('/care/invite', { email: 'kamal@mediconnect.local', relationship: 'Friend', can_act: '1', share_vitals: '1' }, '/care');
+    check('Invite without consent is refused', /Tick the consent box/.test(r.text));
+    r = await pat.post('/care/invite', { email: 'kamal@mediconnect.local', relationship: 'Friend', consent: 'yes' }, '/care');
+    check('Invite that shares nothing is refused', /Choose at least one thing to share/.test(r.text));
+    r = await pat.post('/care/invite', { email: 'kamal@mediconnect.local', relationship: 'Friend', share_vitals: '1', consent: 'yes' }, '/care');
+    check('Patient invites a caregiver with consent and chosen scope', /Invitation sent to Kamal Hasan/.test(r.text) && /Consent receipt/.test(r.text));
+    r = await kamal.get(`/care/timeline/${rahimId}`);
+    check('Nothing is shared before the caregiver accepts', r.status === 403);
+    const inv = await db("SELECT id FROM caregiver_links WHERE patient_id = ? AND caregiver_id = ? AND status = 'pending'", rahimId, kamalId);
+    r = await kamal.post(`/care/links/${inv.id}/accept`, {}, '/care');
+    r = await kamal.get(`/care/timeline/${rahimId}`);
+    check('Accepted caregiver sees only the vitals that were shared', r.status === 200 && /Medicine reminders are not shared/.test(r.text) && /Latest vitals/.test(r.text));
+    r = await pat.post(`/care/links/${inv.id}/revoke`, {}, '/care');
+    r = await kamal.get(`/care/timeline/${rahimId}`);
+    check('Revoked caregiver loses access at once', r.status === 403);
+    const reg2 = new Client();
+    r = await reg2.get('/register');
+    check('Registration offers a Caregiver account', /\/register\/caregiver/.test(r.text));
+    r = await clients['admin@mediconnect.local'].get('/admin/audit?action=caregiver.');
+    check('Caregiver views and actions are audit-logged', /caregiver\.timeline_view/.test(r.text) && /caregiver\.reading_logged/.test(r.text));
+    const missedDose = await db(`SELECT d.id FROM dose_logs d JOIN reminders r ON r.id = d.reminder_id WHERE r.patient_id = ? AND d.status = 'due' AND d.due_at < ?`, kamalId, new Date(Date.now() - 3600000).toISOString());
+    if (missedDose) check('Caregiver is alerted automatically about a missed dose', (await db("SELECT COUNT(*) n FROM notifications WHERE user_id = ? AND title LIKE 'Missed dose%'", taniaId)).n > 0);
+
     console.log('\nRegistration: role picker, OTP once, then direct login');
     const reg = new Client();
     r = await reg.multipart('/register/patient', { full_name: 'Test Patient', email: 'newpatient@example.com', phone: '01799999999', date_of_birth: '1995-01-01', password: 'Secret123', confirm_password: 'Secret123', accept_terms: '1' });

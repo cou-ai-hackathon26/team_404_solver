@@ -2,15 +2,15 @@ const crypto = require('crypto');
 const db = require('../db');
 const { unreadCount } = require('../services/notify');
 
-const DASHBOARD = { patient: '/patient', doctor: '/doctor', center: '/center', pharmacy: '/pharmacy', ambulance: '/ambulance', admin: '/admin' };
-const ROLE_TITLE = { patient: 'Patient', doctor: 'Doctor', center: 'Center Admin', pharmacy: 'Medical Shop', ambulance: 'Ambulance Service', admin: 'Platform Admin' };
+const DASHBOARD = { patient: '/patient', doctor: '/doctor', center: '/center', pharmacy: '/pharmacy', ambulance: '/ambulance', admin: '/admin', caregiver: '/care' };
+const ROLE_TITLE = { patient: 'Patient', doctor: 'Doctor', center: 'Center Admin', pharmacy: 'Medical Shop', ambulance: 'Ambulance Service', admin: 'Platform Admin', caregiver: 'Caregiver' };
 
 // Sidebar navigation per role: [section, [[href, label, icon], ...]]
 const NAV = {
   patient: [
     ['Main', [['/patient', 'Dashboard', 'home'], ['/patient/find-doctor', 'Find a Doctor (AI)', 'stethoscope'], ['/patient/appointments', 'Appointments', 'calendar'], ['/messages', 'Doctor Chat', 'message'], ['/patient/assistant', 'Health AI Chatbot', 'bot']]],
     ['Emergency', [['/emergency', 'Ambulance', 'ambulance'], ['/blood', 'Blood Bank', 'drop']]],
-    ['Health records', [['/patient/tests', 'Medical Tests', 'flask'], ['/patient/records', 'Medical Records', 'file'], ['/patient/access', 'Access Requests', 'shield'], ['/patient/health', 'Health Status', 'activity'], ['/patient/analysis', 'Health Analysis (AI)', 'trend']]],
+    ['Health records', [['/patient/tests', 'Medical Tests', 'flask'], ['/patient/records', 'Medical Records', 'file'], ['/patient/access', 'Access Requests', 'shield'], ['/patient/health', 'Health Status', 'activity'], ['/patient/analysis', 'Health Analysis (AI)', 'trend'], ['/care', 'Caregivers & Timeline', 'users']]],
     ['Pharmacy', [['/patient/shop', 'Medicine Shop', 'cart'], ['/patient/order', 'Order by Prescription', 'pill'], ['/patient/orders', 'Order History', 'file'], ['/patient/reminders', 'Medicine Reminders', 'alarm']]],
     ['Account', [['/patient/profile', 'Profile & Settings', 'user']]],
   ],
@@ -34,9 +34,13 @@ const NAV = {
     ['Main', [['/ambulance', 'Dashboard', 'home'], ['/ambulance/trips', 'Trips', 'ambulance']]],
     ['Account', [['/ambulance/profile', 'Vehicle & Profile', 'truck']]],
   ],
+  caregiver: [
+    ['Care', [['/care', 'Care Dashboard', 'heart'], ['/care?view=people', 'People I Care For', 'users']]],
+    ['Account', [['/notifications', 'Notifications', 'bell'], ['/account', 'Account & Security', 'user']]],
+  ],
   admin: [
     ['Main', [['/admin', 'Dashboard', 'home'], ['/admin/users?role=patient', 'Patients', 'users'], ['/admin/users?role=doctor', 'Doctors', 'stethoscope']]],
-    ['Partners', [['/admin/users?role=center', 'Diagnostic Centers', 'flask'], ['/admin/users?role=pharmacy', 'Medical Shops', 'pill'], ['/admin/users?role=ambulance', 'Ambulances', 'ambulance'], ['/admin/verifications', 'Verifications', 'check']]],
+    ['Partners', [['/admin/users?role=center', 'Diagnostic Centers', 'flask'], ['/admin/users?role=pharmacy', 'Medical Shops', 'pill'], ['/admin/users?role=ambulance', 'Ambulances', 'ambulance'], ['/admin/users?role=caregiver', 'Caregivers', 'heart'], ['/admin/verifications', 'Verifications', 'check']]],
     ['System', [['/admin/audit', 'Audit Logs', 'shield'], ['/admin/catalog', 'Catalog', 'chart']]],
   ],
 };

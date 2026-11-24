@@ -72,6 +72,7 @@ function seed() {
       ['Montelukast', 'Monas', 'Tablet', '10 mg', 1], ['Esomeprazole', 'Sergel', 'Capsule', '20 mg', 0], ['Fexofenadine', 'Fexo', 'Tablet', '120 mg', 0],
       ['Ciprofloxacin', 'Ciprocin', 'Tablet', '500 mg', 1], ['Levothyroxine', 'Thyrox', 'Tablet', '50 mcg', 1], ['Salbutamol', 'Sultolin', 'Inhaler', '100 mcg', 1],
       ['Oral rehydration salts', 'Orsaline-N', 'Sachet', '10.25 g', 0],
+      ['Aspirin', 'Ecosprin', 'Tablet', '75 mg', 0], ['Clopidogrel', 'Clopid', 'Tablet', '75 mg', 1], ['Ibuprofen', 'Profen', 'Tablet', '400 mg', 0],
     ];
     const M = {};
     for (const m of meds) M[m[0]] = db.run('INSERT INTO medicines (name, brand, form, strength, rx_required) VALUES (?, ?, ?, ?, ?)', ...m).id;
@@ -284,6 +285,40 @@ function seed() {
     for (const [m, dose, freq, days, qty] of [['Paracetamol', '1 tablet', '3 times a day', 5, 10], ['Omeprazole', '1 capsule', 'Before breakfast', 14, 14], ['Cetirizine', '1 tablet', 'At night', 7, 7]]) {
       db.run('INSERT INTO prescription_items (prescription_id, medicine_id, raw_name, dose, frequency, duration_days, quantity) VALUES (?, ?, ?, ?, ?, ?, ?)', rx, M[m], m, dose, freq, days, qty);
     }
+    // A second cardiologist later adds blood thinners: the records now hold clopidogrel AND omeprazole,
+    // which a drug-interaction rule says should not be combined without review (the chatbot abstains on this).
+    const rx2 = db.run(
+      "INSERT INTO prescriptions (patient_id, doctor_id, source, diagnosis, notes, verified, created_at) VALUES (?, ?, 'doctor', ?, 'Continue until review', 1, ?)",
+      rahim, imran, 'Suspected angina: antiplatelet therapy started.', at(-2, '18:10')).id;
+    for (const [m, dose, freq, days, qty] of [['Clopidogrel', '1 tablet', 'Once a day', 30, 30], ['Aspirin', '1 tablet', 'After lunch', 30, 30]]) {
+      db.run('INSERT INTO prescription_items (prescription_id, medicine_id, raw_name, dose, frequency, duration_days, quantity) VALUES (?, ?, ?, ?, ?, ?, ?)', rx2, M[m], m, dose, freq, days, qty);
+    }
+    // ---------- Caregiver proxy (hackathon challenge 1) ----------
+    // Tania has a Caregiver account and looks after her husband Rahim and her father Kamal, with their consent.
+    const tania = user('caregiver', 'caregiver@mediconnect.local', 'Tania Rahman', '01712000099', { created: at(-30) });
+    const link = (patientId, caregiverId, rel, canAct, sh, consent, viewed) => db.run(
+      `INSERT INTO caregiver_links (patient_id, caregiver_id, relationship, can_act, share_reminders, share_vitals, share_reports, status, invited_by, consent_at, responded_at, last_viewed_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)`, patientId, caregiverId, rel, canAct, sh[0], sh[1], sh[2], patientId, consent, consent, viewed, consent);
+    link(rahim, tania, 'Spouse', 1, [1, 1, 1], at(-6, '21:00'), at(-1, '21:00'));
+    link(kamal, tania, 'Daughter', 1, [1, 1, 1], at(-10, '19:00'), at(-2, '20:00'));
+    // Sadia (Rahim's sister) may only view his reminders and vitals: a second caregiver with narrower consent.
+    link(rahim, sadia, 'Sibling', 0, [1, 1, 0], at(-3, '20:00'), null);
+    db.run('INSERT INTO care_notes (patient_id, author_id, body, created_at) VALUES (?, ?, ?, ?), (?, ?, ?, ?)',
+      rahim, tania, 'Reminded Rahim to take the evening Paracetamol after dinner. He said the headache is better.', at(-1, '21:40'),
+      rahim, rahim, 'I will be at the office late today; please check my 2 PM dose.', at(0, '08:30'));
+    for (const [action, pid, when] of [['caregiver.accepted', rahim, at(-6, '21:05')], ['caregiver.timeline_view', rahim, at(-1, '21:00')], ['caregiver.note', rahim, at(-1, '21:40')],
+      ['caregiver.timeline_view', kamal, at(-2, '20:00')], ['caregiver.reading_logged', kamal, at(-2, '08:16')]]) {
+      db.run("INSERT INTO audit_log (actor_id, actor_role, action, entity, patient_id, created_at) VALUES (?, 'caregiver', ?, 'patient', ?, ?)", tania, action, pid, when);
+    }
+    // Kamal (age 52): diabetes and blood pressure medicines, a high BP reading and a kidney test that conflicts with metformin.
+    const kRx = db.run("INSERT INTO prescriptions (patient_id, doctor_id, source, diagnosis, verified, created_at) VALUES (?, ?, 'doctor', 'Type 2 diabetes, hypertension', 1, ?)", kamal, imran, at(-12)).id;
+    db.run("INSERT INTO prescription_items (prescription_id, medicine_id, raw_name, dose, frequency, duration_days, quantity) VALUES (?, ?, 'Metformin', '1 tablet', 'Twice a day', 30, 60), (?, ?, 'Amlodipine', '1 tablet', 'Once a day', 30, 30)",
+      kRx, M.Metformin, kRx, M.Amlodipine);
+    [[150, 94, -6], [146, 92, -4], [152, 96, -2], [158, 98, 0]].forEach(([sy, di, d]) =>
+      db.run("INSERT INTO health_readings (patient_id, kind, value1, value2, measured_at, recorded_by) VALUES (?, 'bp', ?, ?, ?, ?)", kamal, sy, di, at(d, '08:15'), d === -2 ? tania : null));
+    db.run("INSERT INTO health_readings (patient_id, kind, value1, context, measured_at) VALUES (?, 'sugar', 8.4, 'fasting', ?)", kamal, at(-1, '07:30'));
+    const kDoc = db.run("INSERT INTO health_documents (patient_id, title, doc_date, extracted_text, created_at) VALUES (?, 'Kidney function test', ?, 'Serum creatinine: 1.8 mg/dL', ?)", kamal, day(-3), at(-3, '12:00')).id;
+    db.run("INSERT INTO health_markers (patient_id, document_id, marker, value, measured_on) VALUES (?, ?, 'creatinine', 1.8, ?)", kamal, kDoc, day(-3));
     const oldRx = db.run("INSERT INTO prescriptions (patient_id, doctor_id, source, diagnosis, verified, created_at) VALUES (?, ?, 'doctor', 'Seasonal allergy', 1, ?)", rahim, nusrat, at(-15)).id;
     db.run("INSERT INTO prescription_items (prescription_id, medicine_id, raw_name, dose, frequency, duration_days, quantity) VALUES (?, ?, 'Fexofenadine', '1 tablet', 'Once a day', 10, 10), (?, ?, 'Montelukast', '1 tablet', 'At night', 10, 10)", oldRx, M.Fexofenadine, oldRx, M.Montelukast);
 
@@ -451,8 +486,8 @@ function seed() {
   // Reminders from the latest prescription, with a few days of history.
   const reminders = require('./services/reminders');
   const rahimId = db.get("SELECT id FROM users WHERE email = 'patient@mediconnect.local'").id;
-  const rx = db.get("SELECT id FROM prescriptions WHERE patient_id = ? AND source = 'doctor' ORDER BY created_at DESC LIMIT 1", rahimId).id;
-  reminders.createFromPrescription(rahimId, rx);
+  // Reminders from the two latest doctor prescriptions (Dr. Farhana's and Dr. Imran's).
+  for (const p of db.all("SELECT id FROM prescriptions WHERE patient_id = ? AND source = 'doctor' ORDER BY created_at DESC LIMIT 2", rahimId)) reminders.createFromPrescription(rahimId, p.id);
   const now2 = new Date();
   const start = new Date(now2.getFullYear(), now2.getMonth(), now2.getDate() - 4);
   db.run('UPDATE reminders SET start_date = ? WHERE patient_id = ?', dateStr(start), rahimId);
@@ -466,8 +501,19 @@ function seed() {
     }
     db.run('UPDATE reminders SET pills_left = MAX(4, pills_left - 6) WHERE id = ?', r.id);
   }
+  // Kamal's reminders (for the caregiver demo).
+  const kamalId = db.get("SELECT id FROM users WHERE email = 'kamal@mediconnect.local'").id;
+  for (const p of db.all("SELECT id FROM prescriptions WHERE patient_id = ? AND source = 'doctor'", kamalId)) reminders.createFromPrescription(kamalId, p.id);
   // Past doses today count as taken, so the demo starts tidy.
   db.run(`UPDATE dose_logs SET status = 'taken', notified = 1, acted_at = due_at WHERE status = 'due' AND due_at < ?`, new Date(Date.now() - 3600000).toISOString());
+  // ...except one of Kamal's doses today, which he missed: his caregiver's dashboard shows it in red.
+  const missed = db.get(`SELECT d.id FROM dose_logs d JOIN reminders r ON r.id = d.reminder_id WHERE r.patient_id = ? AND d.due_at < ? AND d.due_at >= ? ORDER BY d.due_at LIMIT 1`,
+    kamalId, new Date(Date.now() - 3600000).toISOString(), new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
+  if (missed) db.run("UPDATE dose_logs SET status = 'due', acted_at = NULL WHERE id = ?", missed.id);
+  else {
+    const y = db.get(`SELECT d.id FROM dose_logs d JOIN reminders r ON r.id = d.reminder_id WHERE r.patient_id = ? AND d.due_at < ? ORDER BY d.due_at DESC LIMIT 1`, kamalId, new Date().toISOString());
+    if (y) db.run("UPDATE dose_logs SET status = 'skipped' WHERE id = ?", y.id);
+  }
 
   console.log(`Demo data ready. All demo accounts use the password: ${PASSWORD}`);
 }

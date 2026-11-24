@@ -101,7 +101,7 @@ router.post('/verifications/:id/:action(approve|info|reject)', (req, res) => {
 
 // =============== Users ===============
 router.get('/users', (req, res) => {
-  const role = ['patient', 'doctor', 'center', 'pharmacy', 'ambulance', 'admin'].includes(req.query.role) ? req.query.role : '';
+  const role = ['patient', 'doctor', 'center', 'pharmacy', 'ambulance', 'admin', 'caregiver'].includes(req.query.role) ? req.query.role : '';
   const q = String(req.query.q || '').trim();
   const users = db.all(`SELECT id, role, email, full_name, phone, status, email_verified, phone_verified, created_at FROM users
                          WHERE (? = '' OR role = ?) AND (? = '' OR full_name LIKE ? OR email LIKE ?) ORDER BY id DESC LIMIT 300`, role, role, q, `%${q}%`, `%${q}%`)

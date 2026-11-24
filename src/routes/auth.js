@@ -59,6 +59,7 @@ const ROLES = {
   center: { title: 'Diagnostic Center', channel: 'email', status: 'pending' },
   pharmacy: { title: 'Medical Shop (Pharmacy)', channel: 'sms', status: 'pending' },
   ambulance: { title: 'Ambulance Service', channel: 'sms', status: 'pending' },
+  caregiver: { title: 'Caregiver', channel: 'email', status: 'active' },
 };
 const AMBULANCE_KINDS = ['Non-AC', 'AC', 'ICU / Life support', 'Freezer van'];
 const docUpload = uploader('documents');
@@ -70,25 +71,25 @@ router.get('/register', (req, res) => {
   res.render('auth/register-choose', { title: 'Create account', ROLES, wide: true, artTitle: 'Who are you joining as?', artText: 'Patients, doctors, diagnostic centers, medical shops and ambulance services each get their own portal.' });
 });
 router.get('/register/provider', (req, res) => res.redirect(req.query.role && ROLES[req.query.role] ? `/register/${req.query.role}` : '/register'));
-router.get('/register/:role(patient|doctor|center|pharmacy|ambulance)', (req, res) => {
+router.get('/register/:role(patient|doctor|center|pharmacy|ambulance|caregiver)', (req, res) => {
   if (req.user) return res.redirect(DASHBOARD[req.user.role]);
   res.render('auth/register-form', formLocals(req.params.role));
 });
 
 const UPLOADS = docUpload.fields([{ name: 'license', maxCount: 1 }, { name: 'degree', maxCount: 1 }, { name: 'nid', maxCount: 1 }]);
-router.post('/register/:role(patient|doctor|center|pharmacy|ambulance)', limiter, (req, res, next) => handleUpload(UPLOADS, `/register/${req.params.role}`)(req, res, next), ah(async (req, res) => {
+router.post('/register/:role(patient|doctor|center|pharmacy|ambulance|caregiver)', limiter, (req, res, next) => handleUpload(UPLOADS, `/register/${req.params.role}`)(req, res, next), ah(async (req, res) => {
   const role = req.params.role;
   const R = ROLES[role];
   const f = clean(req.body);
   const files = req.files || {};
   const errors = [];
-  if (!f.full_name) errors.push(role === 'patient' || role === 'doctor' ? 'Full name is required.' : 'Owner or contact person name is required.');
+  if (!f.full_name) errors.push(['patient', 'doctor', 'caregiver'].includes(role) ? 'Full name is required.' : 'Owner or contact person name is required.');
   if (!EMAIL_RE.test(f.email || '')) errors.push('A valid email address is required.');
   if (!PHONE_RE.test(f.phone || '')) errors.push('A valid phone number is required.');
   const pw = passwordProblem(req.body.password, req.body.confirm_password);
   if (pw) errors.push(pw);
   if (role === 'patient' && !f.date_of_birth) errors.push('Date of birth is required.');
-  if (role !== 'patient') {
+  if (!['patient', 'caregiver'].includes(role)) {
     if (!f.license_no) errors.push(role === 'ambulance' ? 'Vehicle registration number is required.' : 'License or registration number is required.');
     if (!files.license) errors.push('Upload your license document (PDF or image).');
   }
@@ -116,6 +117,8 @@ router.post('/register/:role(patient|doctor|center|pharmacy|ambulance)', limiter
     } else if (role === 'center') {
       const c = db.run('INSERT INTO centers (name, address, phone, email, license_no, lat, lng) VALUES (?, ?, ?, ?, ?, ?, ?)', f.org_name, f.org_address, f.phone, f.email, f.license_no, coord(f.lat), coord(f.lng));
       db.run("INSERT INTO center_members (user_id, center_id, is_admin, title) VALUES (?, ?, 1, 'Center Admin')", id, c.id);
+    } else if (role === 'caregiver') {
+      // A caregiver has no clinical profile of their own; patients invite them to their shared timeline.
     } else if (role === 'pharmacy') {
       db.run('INSERT INTO pharmacies (admin_user_id, name, address, phone, license_no, lat, lng) VALUES (?, ?, ?, ?, ?, ?, ?)', id, f.org_name, f.org_address, f.phone, f.license_no, coord(f.lat), coord(f.lng));
     } else {

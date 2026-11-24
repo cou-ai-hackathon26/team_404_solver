@@ -161,7 +161,9 @@ router.get('/api/doctors/:id/location', requireAuth, (req, res) => {
 // ---------- Health documents (patient's own uploads) ----------
 router.get('/files/health-doc/:id', requireAuth, (req, res) => {
   const d = db.get('SELECT * FROM health_documents WHERE id = ?', req.params.id);
-  if (!d || !d.file_path || d.patient_id !== req.user.id) return res.status(403).render('shared/error', { title: 'Access denied', message: 'You cannot view this document.' });
+  const care = d && require('../services/caregivers').access(req.user, d.patient_id);
+  if (!d || !d.file_path || !care.ok) return res.status(403).render('shared/error', { title: 'Access denied', message: 'You cannot view this document.' });
+  if (!care.self) audit(req, 'caregiver.document_view', { entity: 'health_document', entityId: d.id, patientId: d.patient_id });
   sendStored(res, d.file_path, d.original_name || 'document', false);
 });
 

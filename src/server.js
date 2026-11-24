@@ -57,6 +57,7 @@ app.use('/pharmacy', require('./routes/pharmacy'));
 app.use('/admin', require('./routes/admin'));
 app.use('/', require('./routes/ambulance'));
 app.use('/', require('./routes/chat'));
+app.use('/care', require('./routes/care'));
 
 app.use((req, res) => res.status(404).render('shared/error', { title: 'Page not found', message: 'That page does not exist.' }));
 // eslint-disable-next-line no-unused-vars

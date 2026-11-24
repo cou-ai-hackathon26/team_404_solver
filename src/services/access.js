@@ -37,7 +37,11 @@ function reportsVisibleToDoctor(doctorId, patientId) {
  */
 function canViewReport(user, report) {
   if (!user || !report) return false;
-  if (user.role === 'patient') return report.patient_id === user.id;
+  if (user.role === 'patient' && report.patient_id === user.id) return true;
+  if (user.role === 'patient' || user.role === 'caregiver') {
+    // An active caregiver the patient approved, and allowed to see reports, can open them from the shared timeline.
+    return !!db.get("SELECT 1 FROM caregiver_links WHERE patient_id = ? AND caregiver_id = ? AND status = 'active' AND share_reports = 1", report.patient_id, user.id);
+  }
   if (user.role === 'center') return user.centerId === report.center_id;
   if (user.role === 'doctor') {
     return activeGrants(user.id, report.patient_id).some((g) => g.report_id === null || g.report_id === report.id);

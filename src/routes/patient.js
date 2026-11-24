@@ -833,6 +833,10 @@ router.post('/health', (req, res) => {
     req.user.id, kind, v1, v2, kind === 'sugar' ? (req.body.context === 'fasting' ? 'fasting' : 'random') : null, measured.toISOString());
   const r = db.get('SELECT * FROM health_readings WHERE id = ?', id);
   const s = health.classify(r, profileOf(req.user.id).height_cm);
+  if (s.level === 'urgent' || s.level === 'doctor') {
+    require('../services/caregivers').alertCaregivers(req.user.id, 'vitals', `${s.level === 'urgent' ? 'Urgent reading' : 'Reading to review'}: ${req.user.full_name}`,
+      `${health.KINDS[kind].name} ${health.fmt(r)} ${health.KINDS[kind].unit}: ${s.note}.`, 'alert');
+  }
   if (s.level === 'urgent') req.flash('error', `${s.note}. If you feel unwell, call 999 or go to the nearest emergency department now.`);
   else if (s.level === 'doctor') req.flash('error', `${s.note}. Book a doctor to review it.`);
   else req.flash('success', `Saved. ${s.note}.`);
@@ -925,6 +929,9 @@ router.post('/assistant', ah(async (req, res) => {
   db.run("INSERT INTO chat_messages (user_id, role, body) VALUES (?, 'user', ?)", req.user.id, message);
   const r = await assistant.reply(req.user, message);
   db.run("INSERT INTO chat_messages (user_id, role, body, flagged) VALUES (?, 'assistant', ?, ?)", req.user.id, r.text, r.flagged ? 1 : 0);
+  if (r.abstained) {
+    audit(req, 'assistant.abstained', { patientId: req.user.id, details: r.conflicts.map((c) => `${c.drugs.join('+')}: ${c.why}`).join(' | ').slice(0, 500) });
+  }
   res.redirect('/patient/assistant#end');
 }));
 router.post('/assistant/clear', (req, res) => {

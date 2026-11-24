@@ -167,3 +167,15 @@ Claude Desktop config (`claude_desktop_config.json`):
 ```json
 { "mcpServers": { "mediconnect": { "command": "node", "args": ["C:/path/to/mediconnect/mcp/server.js"] } } }
 ```
+
+## Hackathon challenges (COU Technova 2026)
+
+**1. Caregiver proxy on a shared timeline.** A new **Caregiver** account type (Register → Caregiver) has its own portal. A patient invites a caregiver from **Caregivers & Timeline**, chooses exactly what to share (medicine reminders, vitals, reports) and whether the caregiver may act for them, and ticks a consent box; the invite stores a consent receipt. Nothing is shared until the caregiver accepts, and the patient can change permissions or revoke at any time.
+- **Care dashboard** (caregiver home): everyone they look after with a red/amber/green status, missed doses, abnormal vitals, medicine-safety alerts, adherence and "new since your last visit", plus one-tap "Mark taken", Call and 999.
+- **Shared timeline**: doses, vitals, reports, appointments and care notes in one feed (filters, 3–30 days, NEW markers). The caregiver can mark doses and log readings (if allowed); every action shows "by <caregiver>", notifies the patient and is audit-logged.
+- **Automatic alerts**: caregivers are notified when a dose is missed by over an hour or a dangerous reading is logged.
+- Demo: click **Caregiver** on the login page (Tania Rahman looks after Rahim and her father Kamal). Code: `src/services/caregivers.js`, `src/routes/care.js`, `views/care/`.
+
+**2. The chatbot abstains when records and a drug-interaction rule disagree.** `src/services/interactions.js` holds fixed drug-interaction rules (drug + drug, and drug + lab value such as high creatinine). Before the Health AI answers, it checks the medicines in the patient's own records (prescriptions, active reminders, lab results) against those rules. If the records say "take it" but a rule says "don't combine", neither Claude nor the built-in answers reply: the bot explains the conflict, sends the patient to their doctor or pharmacist, and the event is written to the audit log. The same alert appears on the shared timeline for the caregiver. Demo: as Rahim, ask "Can I take my omeprazole with clopidogrel?" or "Can I take ibuprofen?".
+
+Tests: `npm test` (162 checks, including both challenges).

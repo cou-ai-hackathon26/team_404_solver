@@ -12,6 +12,7 @@ const reminders = require('./reminders');
 const health = require('./health');
 const { adviceFor } = require('./firstaid');
 const { correctiveRetrieve } = require('./retrieval');
+const interactions = require('./interactions');
 
 const EMERGENCY = [
   'chest pain', 'can\'t breathe', 'cannot breathe', 'difficulty breathing', 'unconscious', 'fainted', 'seizure',
@@ -157,14 +158,22 @@ async function reply(user, message) {
         : 'This could be an emergency. Call 999 now or go to the nearest emergency department. If you are alone, call someone to be with you.',
     };
   }
+  // Safety stop: if the patient's own records and a drug-interaction rule disagree, don't answer at all
+  // (neither the AI nor the built-in rules). Explain the conflict and send them to their doctor.
+  const check = interactions.checkQuestion(user.id, message);
+  if (check && check.conflicts.length) {
+    return { flagged: true, abstained: true, conflicts: check.conflicts, text: interactions.abstainText(check.conflicts, isBangla(message)) };
+  }
+  const caution = check && check.ruleOnly ? interactions.ruleOnlyText(check.ruleOnly, isBangla(message)) : '';
   const ctx = context(user.id);
   if (config.anthropicKey) {
     // Retrieve the matching first-aid entry; if the wording matches nothing, rewrite the query and retry.
     const { result: aid } = await correctiveRetrieve(message, adviceFor);
     const text = await llmReply(user.id, message, ctx, aid);
-    if (text) return { flagged: false, text, ai: true };
+    if (text) return { flagged: false, text: caution ? `${caution}\n\n${text}` : text, ai: true };
   }
-  return { flagged: false, text: ruleReply(message, ctx) };
+  const text = ruleReply(message, ctx);
+  return { flagged: false, text: caution ? `${caution}\n\n${text}` : text };
 }
 
 module.exports = { reply, isBangla };

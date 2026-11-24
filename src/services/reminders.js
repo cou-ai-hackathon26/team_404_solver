@@ -93,12 +93,12 @@ function adherence(patientId, days = 7) {
   return { taken, total: counted.length, pct: counted.length ? Math.round((taken / counted.length) * 100) : null };
 }
 
-function mark(patientId, doseId, status) {
+function mark(patientId, doseId, status, actorId = null) {
   const d = db.get(
     `SELECT d.*, r.patient_id, r.pills_left, r.id AS rid, r.medicine_name, r.prescription_id FROM dose_logs d
       JOIN reminders r ON r.id = d.reminder_id WHERE d.id = ? AND r.patient_id = ?`, doseId, patientId);
   if (!d || !['taken', 'skipped'].includes(status)) return false;
-  db.run('UPDATE dose_logs SET status = ?, acted_at = ? WHERE id = ?', status, db.now(), d.id);
+  db.run('UPDATE dose_logs SET status = ?, acted_at = ?, acted_by = ? WHERE id = ?', status, db.now(), actorId, d.id);
   if (status === 'taken' && d.status !== 'taken' && d.pills_left != null) {
     const left = Math.max(0, d.pills_left - 1);
     db.run('UPDATE reminders SET pills_left = ? WHERE id = ?', left, d.rid);
@@ -122,6 +122,7 @@ function tick() {
       notify(d.patient_id, `Time to take ${d.medicine_name}`, `Dose: ${d.dose || '1'}. Mark it as taken in Medicine Reminders.`, '/patient/reminders', 'reminder');
       db.run('UPDATE dose_logs SET notified = 1 WHERE id = ?', d.id);
     }
+    require('./caregivers').alertMissedDoses(); // tell caregivers about doses missed by more than an hour
   } catch (e) {
     console.error('Reminder tick failed:', e.message);
   }
