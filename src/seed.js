@@ -90,7 +90,7 @@ function seed() {
       return id;
     };
     const rahim = patient('patient@mediconnect.local', 'Rahim Uddin', '01712345678', '1992-03-05', 'Male', 'B+', 'House 12, Road 5, Dhanmondi, Dhaka', 23.7465, 90.376, at(-40), { emergency: '01811223344', height: 170 });
-    db.run("UPDATE patient_profiles SET patient_code = 'PT-2026-0148' WHERE user_id = ?", rahim);
+    db.run("UPDATE patient_profiles SET patient_code = 'PT-2026-0148', allergies = 'Penicillin', conditions = 'Stomach ulcer (2023)' WHERE user_id = ?", rahim);
     const sadia = patient('sadia@mediconnect.local', 'Sadia Akter', '01712000002', '1997-06-11', 'Female', 'O+', 'Kalabagan, Dhaka', 23.749, 90.379, at(-120));
     const kamal = patient('kamal@mediconnect.local', 'Kamal Hasan', '01712000003', '1974-02-20', 'Male', 'A+', 'Green Road, Dhaka', 23.753, 90.383, at(-150));
     const nasrin = patient('nasrin@mediconnect.local', 'Nasrin Sultana', '01712000004', '1979-09-01', 'Female', 'AB+', 'Mohammadpur, Dhaka', 23.759, 90.36, at(-160));
@@ -143,6 +143,17 @@ function seed() {
       ['dr.zaman@mediconnect.local', 'Dr. Asaduzzaman', 'Urology', 'MBBS, MS (Urology)', 14, 1200, 'Shyamoli, Dhaka', 23.771, 90.365, 'evening'],
       ['dr.mitu@mediconnect.local', 'Dr. Mithila Rahman', 'Nephrology', 'MBBS, MD (Nephrology)', 11, 1100, 'Panthapath, Dhaka', 23.751, 90.389, 'morning'],
       ['dr.saif@mediconnect.local', 'Dr. Saiful Karim', 'Orthopedics', 'MBBS, D-Ortho', 6, 800, 'Kalabagan, Dhaka', 23.7495, 90.38, 'full'],
+      // More specialists so the Health AI can recommend several doctors for each common problem.
+      ['dr.sohel@mediconnect.local', 'Dr. Sohel Rana', 'Neurology', 'MBBS, FCPS (Neurology)', 9, 1000, 'Kalabagan, Dhaka', 23.749, 90.381, 'full'],
+      ['dr.farzana@mediconnect.local', 'Dr. Farzana Haque', 'Neurology', 'MBBS, MD (Neurology)', 12, 1200, 'Mohammadpur, Dhaka', 23.761, 90.363, 'evening'],
+      ['dr.monir@mediconnect.local', 'Dr. Moniruzzaman', 'Gastroenterology', 'MBBS, FCPS (Gastro)', 14, 1200, 'Dhanmondi 9, Dhaka', 23.745, 90.375, 'full'],
+      ['dr.ruma@mediconnect.local', 'Dr. Rumana Ferdous', 'Gastroenterology', 'MBBS, MD (Hepatology)', 8, 900, 'Lalmatia, Dhaka', 23.757, 90.368, 'evening'],
+      ['dr.jamil@mediconnect.local', 'Dr. Jamil Hossain', 'General Medicine', 'MBBS, MD (Internal Medicine)', 10, 700, 'Dhanmondi 4, Dhaka', 23.741, 90.378, 'full'],
+      ['dr.poly@mediconnect.local', 'Dr. Poly Akter', 'General Medicine', 'MBBS, CCD', 6, 500, 'Kalabagan, Dhaka', 23.748, 90.379, 'evening'],
+      ['dr.shafiq@mediconnect.local', 'Dr. Shafiqul Islam', 'Dermatology', 'MBBS, FCPS (Skin)', 11, 900, 'Dhanmondi 27, Dhaka', 23.754, 90.373, 'morning'],
+      ['dr.ayesha@mediconnect.local', 'Dr. Ayesha Siddiqua', 'Dentistry', 'BDS, FCPS (Oral Surgery)', 9, 700, 'Green Road, Dhaka', 23.752, 90.385, 'evening'],
+      ['dr.nasima@mediconnect.local', 'Dr. Nasima Begum', 'Gynecology & Obstetrics', 'MBBS, MS (Obs & Gynae)', 12, 1000, 'Mohammadpur, Dhaka', 23.758, 90.361, 'full'],
+      ['dr.kabir@mediconnect.local', 'Dr. Humayun Kabir', 'Pulmonology', 'MBBS, MD (Respiratory)', 10, 900, 'Dhanmondi, Dhaka', 23.744, 90.377, 'evening'],
     );
     for (const d of others) doctor(...d);
     // A doctor approved by the admin this week: shows that newly added specialists appear in AI search.
@@ -310,6 +321,7 @@ function seed() {
       ['caregiver.timeline_view', kamal, at(-2, '20:00')], ['caregiver.reading_logged', kamal, at(-2, '08:16')]]) {
       db.run("INSERT INTO audit_log (actor_id, actor_role, action, entity, patient_id, created_at) VALUES (?, 'caregiver', ?, 'patient', ?, ?)", tania, action, pid, when);
     }
+    db.run("UPDATE patient_profiles SET allergies = 'Ibuprofen (skin rash)', conditions = 'Type 2 diabetes, high blood pressure' WHERE user_id = ?", kamal);
     // Kamal (age 52): diabetes and blood pressure medicines, a high BP reading and a kidney test that conflicts with metformin.
     const kRx = db.run("INSERT INTO prescriptions (patient_id, doctor_id, source, diagnosis, verified, created_at) VALUES (?, ?, 'doctor', 'Type 2 diabetes, hypertension', 1, ?)", kamal, imran, at(-12)).id;
     db.run("INSERT INTO prescription_items (prescription_id, medicine_id, raw_name, dose, frequency, duration_days, quantity) VALUES (?, ?, 'Metformin', '1 tablet', 'Twice a day', 30, 60), (?, ?, 'Amlodipine', '1 tablet', 'Once a day', 30, 30)",

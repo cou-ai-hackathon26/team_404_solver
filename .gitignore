@@ -5,3 +5,5 @@ data/*.db-*
 uploads/*
 !uploads/.gitkeep
 *.traineddata
+
+data/*.bak

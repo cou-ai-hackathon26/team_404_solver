@@ -6,7 +6,11 @@
     <div class="chat">
       <div class="msg assistant">আসসালামু আলাইকুম <%= user.full_name.split(' ')[0] %>! আমি আপনার Health AI। আপনার কী সমস্যা লিখুন — প্রথমে কী করবেন আর কখন ডাক্তার দেখাবেন জানিয়ে দেব।
 Hello! Tell me what you feel and I will give first-aid advice. In an emergency call 999.</div>
-      <% for (const m of messages) { %><div class="msg <%= m.role %> <%= m.flagged ? 'flag' : '' %>"><%= m.body %></div><% } %>
+      <% const linkify = (t) => esc(t)
+           .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+           .replace(/(^|\s)(\/patient\/doctors\/\d+)/g, '$1<a class="chat-book" href="$2">📅 View profile &amp; book appointment</a>')
+           .replace(/(^|\s)(\/patient\/find-doctor[^\s<]*)/g, '$1<a class="chat-more" href="$2">🔎 Find a Doctor</a>'); %>
+      <% for (const m of messages) { %><div class="msg <%= m.role %> <%= m.flagged ? 'flag' : '' %>"><%- m.role === 'assistant' ? linkify(m.body) : esc(m.body) %></div><% } %>
       <span id="end"></span>
     </div>
     <form method="post" action="/patient/assistant" class="row nowrap mt" data-chat-form><%- include('../partials/csrf') %>
@@ -14,10 +18,20 @@ Hello! Tell me what you feel and I will give first-aid advice. In an emergency c
   </section>
   <div class="stack">
     <section class="card soft"><h2 style="margin-bottom:12px">Try asking</h2>
-      <% for (const s of ['আমার মাথা ব্যথা, প্রাথমিকভাবে কী করতে পারি?', 'গতকাল থেকে জ্বর, কী করব?', 'I have acidity after meals', 'হাত মচকে গেছে, কী করব?', 'How can I sleep better?', 'Healthy diet tips', "What medicines do I take today?", 'When is my next appointment?']) { %>
+      <% for (const s of ['আমার মাথা ব্যথা, প্রাথমিকভাবে কী করতে পারি?', 'গতকাল থেকে জ্বর, কী করব?', 'I have a headache, which medicine can I take?', 'আমার মাথা ব্যথা আর পেট ব্যথা করছে', 'Severe stomach pain for 4 days', 'Can I take ibuprofen?', 'I have acidity after meals', 'Can I take amoxicillin for my sore throat?', 'হাত মচকে গেছে, কী করব?', 'Can I take cetirizine for itching?', 'When is my next appointment?']) { %>
         <button type="button" class="item" data-suggest="<%= s %>" style="width:100%;text-align:left;cursor:pointer;font:inherit;background:#fff"><%- icon('sparkles', 16) %><span><%= s %></span></button><% } %></section>
+    <section class="card"><div class="card-h"><h2>Your medicine safety profile</h2><a class="btn ghost sm" href="/patient/profile#medical">Edit</a></div>
+      <p class="muted small" style="margin-top:-6px">The assistant checks these before suggesting any medicine.</p>
+      <div class="item"><span class="tile sm t-red"><%- icon('shield', 15) %></span><div class="grow"><b>Allergies</b><div class="meta"><%= safety.allergies || 'None recorded. Add them in your profile.' %></div></div></div>
+      <div class="item"><span class="tile sm t-purple"><%- icon('heart', 15) %></span><div class="grow"><b>Conditions &amp; diagnoses</b><div class="meta"><%= safety.conditionText || 'None recorded' %></div></div></div>
+      <div class="item"><span class="tile sm t-blue"><%- icon('pill', 15) %></span><div class="grow"><b>Current medicines</b><div class="meta"><%= Object.values(safety.meds).map(m => m.generic[0].toUpperCase() + m.generic.slice(1)).join(', ') || 'None' %></div></div></div>
+      <% const labs = Object.values(safety.labs).filter(l => ['creatinine','alt','glucose','hba1c'].includes(l.marker)); if (labs.length) { %>
+      <div class="item"><span class="tile sm t-teal"><%- icon('flask', 15) %></span><div class="grow"><b>Latest labs used</b><div class="meta"><%= labs.map(l => l.marker + ' ' + l.value + ' (' + l.measured_on + ')').join(' · ') %></div></div></div><% } %>
+      <% if (conflicts.length) { %><div class="note mt-s" style="background:#fef2f2;color:#b91c1c"><%- icon('bell', 16) %> <%= conflicts.length %> conflict(s) between your records and a drug-interaction rule. The assistant will not advise on those medicines; ask your doctor.</div><% } %>
+    </section>
     <section class="card"><h2 style="margin-bottom:10px">Safety</h2>
       <div class="note"><%- icon('shield', 18) %> Emergency words (chest pain, can’t breathe, unconscious…) always get the 999 advice first.</div>
+      <div class="note blue mt-s"><%- icon('pill', 18) %> It suggests only over-the-counter medicines that suit your records, says which to avoid and why, and never prescribes antibiotics or other prescription medicines.</div>
       <p class="muted small mt-s">The assistant reads only your own records, and only to answer your question.</p></section>
   </div>
 </div>

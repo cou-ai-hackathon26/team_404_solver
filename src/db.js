@@ -13,7 +13,7 @@ try {
 }
 
 fs.mkdirSync(path.dirname(config.dbFile), { recursive: true });
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 7;
 // A database from an older version of MediConnect is backed up and rebuilt with fresh demo data.
 if (fs.existsSync(config.dbFile)) {
   const old = new DatabaseSync(config.dbFile);
@@ -425,9 +425,11 @@ CREATE INDEX IF NOT EXISTS idx_dose_due ON dose_logs(status, due_at);
 `);
 
 // Who did it: set when a caregiver marks a dose or logs a reading for the patient.
-for (const [table, col] of [['dose_logs', 'acted_by'], ['health_readings', 'recorded_by'], ['dose_logs', 'caregiver_alerted']]) {
+// Allergies and long-term conditions: the Health AI checks them before suggesting any medicine.
+for (const [table, col, type] of [['dose_logs', 'acted_by', 'INTEGER REFERENCES users(id)'], ['health_readings', 'recorded_by', 'INTEGER REFERENCES users(id)'],
+  ['dose_logs', 'caregiver_alerted', 'INTEGER NOT NULL DEFAULT 0'], ['patient_profiles', 'allergies', 'TEXT'], ['patient_profiles', 'conditions', 'TEXT']]) {
   const cols = raw.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
-  if (!cols.includes(col)) raw.exec(`ALTER TABLE ${table} ADD COLUMN ${col} INTEGER${col === 'caregiver_alerted' ? ' NOT NULL DEFAULT 0' : ' REFERENCES users(id)'}`);
+  if (!cols.includes(col)) raw.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
 }
 
 raw.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);

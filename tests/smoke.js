@@ -233,6 +233,65 @@ async function main() {
     r = await sad.post('/patient/assistant', { message: 'Can I take ibuprofen?' }, '/patient/assistant');
     check('Patient with no conflicting records gets an answer', !/answer this one safely/.test(r.text));
 
+    console.log('\nChallenge 2+: personal, record-aware medicine advice');
+    const last = (t, q) => t.split('Try asking')[0].split(q).pop();
+    let qq = 'I have a headache, which medicine can I take?';
+    r = await pat.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Headache advice is personalised from the records', /Medicines that suit you/.test(last(r.text, qq)) && /already take it/.test(last(r.text, qq)));
+    check('Unsafe option is avoided with reasons from the records', /Avoid for you/.test(last(r.text, qq)) && /stomach ulcer history/.test(last(r.text, qq)) && /interacts with your aspirin/.test(last(r.text, qq)));
+    qq = 'Can I take amoxicillin for my sore throat?';
+    r = await pat.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Never prescribes antibiotics and flags the penicillin allergy', /prescription medicine/.test(last(r.text, qq)) && /penicillin allergy/.test(last(r.text, qq)));
+    qq = 'I have back pain, what can I take?';
+    const kam = new Client(); await kam.login('kamal@mediconnect.local');
+    r = await kam.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Allergy and kidney lab rule out NSAIDs for Kamal', /Avoid for you/.test(last(r.text, qq)) && /creatinine is high/.test(last(r.text, qq)) && /allergy/i.test(last(r.text, qq)) && /Paracetamol/.test(last(r.text, qq)));
+    qq = 'Can I take cetirizine for itching?';
+    r = await kam.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Safe medicine is confirmed after checking the records', /looks OK for you/.test(last(r.text, qq)) && /Checked against your records/.test(last(r.text, qq)));
+    r = await kam.get('/patient/assistant');
+    check('Chat page shows the medicine safety profile it uses', /Your medicine safety profile/.test(r.text) && /Ibuprofen \(skin rash\)/.test(r.text));
+    const sadiaUser = await db("SELECT id FROM users WHERE email = 'sadia@mediconnect.local'");
+    await db("UPDATE patient_profiles SET allergies = 'Penicillin' WHERE user_id = ?", sadiaUser.id);
+    await db("INSERT INTO prescriptions (patient_id, source, diagnosis, verified, created_at) VALUES (?, 'upload', 'Throat infection', 1, ?)", sadiaUser.id, new Date().toISOString());
+    const sRx = await db('SELECT MAX(id) id FROM prescriptions WHERE patient_id = ?', sadiaUser.id);
+    await db("INSERT INTO prescription_items (prescription_id, raw_name, dose, frequency, duration_days) VALUES (?, 'Amoxicillin 500 mg', '1 capsule', '3 times a day', 7)", sRx.id);
+    qq = 'Should I take my amoxicillin now?';
+    r = await sad.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Abstains when a prescribed medicine conflicts with a recorded allergy', /answer this one safely/.test(last(r.text, qq)) && /penicillin allergy/.test(last(r.text, qq)));
+    r = await kam.post('/patient/profile', { full_name: 'Kamal Hasan', phone: '01712000003', allergies: 'Ibuprofen (skin rash), Sulfa', conditions: 'Type 2 diabetes' }, '/patient/profile');
+    check('Patient can record allergies and conditions', /Sulfa/.test((await kam.get('/patient/profile')).text));
+
+    console.log('\nChallenge 2+: several problems, sources, vitals and doctor referral');
+    qq = 'I have a headache and fever';
+    r = await sad.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Several problems are combined into one plan', /I found 2 problems/.test(last(r.text, qq)) && /helps headache \+ fever/.test(last(r.text, qq)));
+    check('Answer lists clickable source links', /Sources:/.test(last(r.text, qq)) && /href="https:\/\/www\.nhs\.uk\/medicines\/paracetamol-for-adults\/"/.test(last(r.text, qq)));
+    qq = 'I have a headache, what can I take?';
+    r = await kam.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Recent vitals (high BP) are used to avoid a medicine', /recent blood pressure is high/.test(last(r.text, qq)));
+    qq = 'Severe stomach pain for 4 days';
+    r = await sad.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Critical problem: no medicines, a doctor is needed', /This needs a doctor/.test(last(r.text, qq)) && !/Medicines that suit you/.test(last(r.text, qq)));
+    check('Critical problem: matching verified doctors are suggested with a link', /Gastroenterology/.test(last(r.text, qq)) && /href="\/patient\/doctors\/\d+"/.test(last(r.text, qq)));
+
+    console.log('\nBangla and Banglish understanding');
+    qq = 'amar matha batha r pet batha, ki khabo?';
+    r = await pat.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Banglish message: both problems found, reply in Bangla', /২টি সমস্যা|2টি সমস্যা/.test(last(r.text, qq)) && /আপনার জন্য এড়িয়ে চলুন/.test(last(r.text, qq)) && /পেপটিক আলসারের ইতিহাস/.test(last(r.text, qq)));
+    qq = '৪ দিন ধরে পেটে তীব্র ব্যথা';
+    r = await sad.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Bangla critical problem goes to a doctor, in Bangla', /ডাক্তার দেখানো দরকার/.test(last(r.text, qq)) && /তীব্র ব্যথা/.test(last(r.text, qq)) && /Gastroenterology/.test(last(r.text, qq)));
+    qq = 'ami ki ibuprofen khete pari?';
+    r = await pat.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Banglish drug question: records vs rule conflict explained in Bangla', /উত্তর আমি দিতে পারছি না/.test(last(r.text, qq)) && /অ্যাসপিরিনের সাথে আইবুপ্রোফেন/.test(last(r.text, qq)));
+
+    qq = 'I have a headache and fever';
+    r = await sad.post('/patient/assistant', { message: qq }, '/patient/assistant');
+    check('Doctors for the problem are recommended with booking links', (last(r.text, qq).match(/class="chat-book" href="\/patient\/doctors\/\d+"/g) || []).length >= 3 && /href="\/patient\/find-doctor\?specialty=/.test(last(r.text, qq)));
+    const bookLink = (last(r.text, qq).match(/class="chat-book" href="(\/patient\/doctors\/\d+)"/) || [])[1];
+    if (bookLink) { const dp = await sad.get(bookLink); check('Doctor link opens the booking page', dp.status === 200 && /Book|বুক/.test(dp.text)); }
+
     console.log('\nChallenge 1: caregiver proxy on a shared timeline');
     const rahimId = (await db("SELECT id FROM users WHERE email = 'patient@mediconnect.local'")).id;
     const kamalId = (await db("SELECT id FROM users WHERE email = 'kamal@mediconnect.local'")).id;

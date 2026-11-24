@@ -796,6 +796,10 @@ router.post('/profile', (req, res) => {
   db.run('UPDATE users SET full_name = ?, phone = ? WHERE id = ?', name, phone, req.user.id);
   db.run(`UPDATE patient_profiles SET date_of_birth = ?, gender = ?, blood_group = ?, address = ?, emergency_contact = ?, height_cm = ?, lat = ?, lng = ? WHERE user_id = ?`,
     b.date_of_birth || null, b.gender || null, b.blood_group || null, b.address || null, b.emergency_contact || null, num(b.height_cm, 50, 250), num(b.lat, -90, 90), num(b.lng, -180, 180), req.user.id);
+  if ('allergies' in b || 'conditions' in b) {
+    db.run('UPDATE patient_profiles SET allergies = ?, conditions = ? WHERE user_id = ?',
+      String(b.allergies || '').trim().slice(0, 300) || null, String(b.conditions || '').trim().slice(0, 300) || null, req.user.id);
+  }
   req.flash('success', 'Profile saved.');
   res.redirect('/patient/profile');
 });
@@ -921,13 +925,15 @@ router.post('/reminders/:id/refill', (req, res) => {
 // =============== Health assistant chatbot (new) ===============
 router.get('/assistant', (req, res) => {
   const messages = db.all('SELECT * FROM chat_messages WHERE user_id = ? ORDER BY id DESC LIMIT 40', req.user.id).reverse();
-  res.render('patient/assistant', { title: 'Health assistant', messages, ai: !!config.anthropicKey });
+  const safety = require('../services/medsafety').profileOf(req.user.id);
+  res.render('patient/assistant', { title: 'Health assistant', messages, ai: !!config.anthropicKey, safety, conflicts: require('../services/interactions').forPatient(req.user.id) });
 });
 router.post('/assistant', ah(async (req, res) => {
   const message = String(req.body.message || '').trim().slice(0, 1000);
   if (!message) return res.redirect('/patient/assistant');
   db.run("INSERT INTO chat_messages (user_id, role, body) VALUES (?, 'user', ?)", req.user.id, message);
-  const r = await assistant.reply(req.user, message);
+  const lang = /(?:^|;\s*)mc_lang=bn/.test(req.headers.cookie || '') ? 'bn' : 'en';
+  const r = await assistant.reply(req.user, message, { lang });
   db.run("INSERT INTO chat_messages (user_id, role, body, flagged) VALUES (?, 'assistant', ?, ?)", req.user.id, r.text, r.flagged ? 1 : 0);
   if (r.abstained) {
     audit(req, 'assistant.abstained', { patientId: req.user.id, details: r.conflicts.map((c) => `${c.drugs.join('+')}: ${c.why}`).join(' | ').slice(0, 500) });

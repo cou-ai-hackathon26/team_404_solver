@@ -22,7 +22,10 @@
         <label class="f">Gender<select name="gender" form="profile-form"><option value="">Prefer not to say</option><% for (const g of ['Female','Male','Other']) { %><option <%= profile.gender === g ? 'selected' : '' %>><%= g %></option><% } %></select></label>
         <label class="f">Height (cm) <small>for BMI</small><input type="number" name="height_cm" value="<%= profile.height_cm || '' %>" form="profile-form"></label>
         <label class="f full">Address<input name="address" value="<%= profile.address || '' %>" form="profile-form"></label>
+        <label class="f full" id="medical">Allergies <small>(medicines or foods, e.g. Penicillin, Aspirin, Sulfa)</small><input name="allergies" value="<%= profile.allergies || '' %>" form="profile-form" placeholder="None"></label>
+        <label class="f full">Long-term conditions <small>(e.g. Diabetes, Asthma, Kidney disease, Stomach ulcer, Pregnancy)</small><input name="conditions" value="<%= profile.conditions || '' %>" form="profile-form" placeholder="None"></label>
       </div>
+      <p class="muted small" style="margin-top:-4px">The Health AI uses your allergies and conditions so it never suggests a medicine that could harm you.</p>
       <div class="row"><span class="muted small">Location (for nearby doctors, centers and pharmacies):</span>
         <input name="lat" value="<%= profile.lat ?? '' %>" placeholder="Latitude" form="profile-form" style="max-width:150px;margin:0"><input name="lng" value="<%= profile.lng ?? '' %>" placeholder="Longitude" form="profile-form" style="max-width:150px;margin:0">
         <button type="button" class="btn ghost sm" data-geolocate form="profile-form">Use my location</button></div>

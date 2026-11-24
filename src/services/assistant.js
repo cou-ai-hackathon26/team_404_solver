@@ -13,6 +13,7 @@ const health = require('./health');
 const { adviceFor } = require('./firstaid');
 const { correctiveRetrieve } = require('./retrieval');
 const interactions = require('./interactions');
+const medsafety = require('./medsafety');
 
 const EMERGENCY = [
   'chest pain', 'can\'t breathe', 'cannot breathe', 'difficulty breathing', 'unconscious', 'fainted', 'seizure',
@@ -20,6 +21,9 @@ const EMERGENCY = [
   'kill myself', 'overdose', 'বুকে ব্যথা', 'শ্বাস নিতে কষ্ট', 'অজ্ঞান', 'খিঁচুনি', 'রক্তবমি', 'আত্মহত্যা',
 ];
 const isBangla = (t) => /[ঀ-৿]/.test(t);
+// Bangla written in English letters ("amar matha batha, ki khabo?"): two or more common Banglish words.
+const BANGLISH = /\b(ami|amar|amr|apni|ki|kি|keno|korbo|krbo|kori|khabo|khbo|khete|khaite|parbo|pari|hoise|hoyeche|hocche|hosse|hoy|geche|gese|betha|batha|bytha|jor|jwr|pet|pete|matha|mathay|osudh|oshudh|osud|ache|ase|nai|kemon|daktar|dactar|vai|bhai|onek|khub|kom|beshi|din|dhore|theke|r|ar|kisu|kichu|lagche|lagse|korte|kore|bujhi|chulkani|kashi|sordi|bomi|gorom|thanda|dat|komor|dorkar)\b/gi;
+const isBanglish = (t) => !isBangla(t) && (String(t).match(BANGLISH) || []).length >= 2;
 const has = (t, words) => words.some((w) => t.includes(w));
 const when = (iso) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
@@ -65,7 +69,7 @@ Rules you must follow:
 - If anything sounds like an emergency, tell them to call 999 or go to the nearest emergency department now.
 - Point to MediConnect pages when useful: Find a Doctor (AI), Appointments, Medical Tests, Medicine Reminders, Order Medicine, Health Status, Blood Bank.`;
 
-async function llmReply(userId, message, ctx, aid) {
+async function llmReply(userId, message, ctx, aid, safety = '') {
   const history = db
     .all('SELECT role, body FROM chat_messages WHERE user_id = ? ORDER BY id DESC LIMIT 10', userId)
     .reverse()
@@ -81,7 +85,8 @@ async function llmReply(userId, message, ctx, aid) {
         model: config.anthropicModel,
         max_tokens: 400,
         system: `${SYSTEM}\n\nPatient records:\n${contextText(ctx)}` +
-          (aid ? `\n\nRetrieved first-aid knowledge (base your advice on it; reply in the user's language):\n${aid.en}\nSuggested specialist: ${aid.specialty}` : ''),
+          (aid ? `\n\nRetrieved first-aid knowledge (base your advice on it; reply in the user's language):\n${aid.en}\nSuggested specialist: ${aid.specialty}` : '') +
+          (safety ? `\n\nPersonal medicine safety check from this patient's records (follow it exactly; only suggest the allowed medicines, explain why others are avoided):\n${safety}` : ''),
         messages: [...history, { role: 'user', content: message }],
       }),
     });
@@ -96,9 +101,9 @@ async function llmReply(userId, message, ctx, aid) {
   }
 }
 
-function ruleReply(message, c) {
+function ruleReply(message, c, bnOverride) {
   const t = message.toLowerCase();
-  const bn = isBangla(message);
+  const bn = bnOverride ?? isBangla(message);
   const L = (en, b) => (bn ? b : en);
 
   // First-aid advice comes first: "I have a headache, what should I do?"
@@ -148,12 +153,14 @@ function ruleReply(message, c) {
     'আমি আপনার স্বাস্থ্য পরামর্শদাতা। আপনার কী সমস্যা লিখুন (যেমন "মাথা ব্যথা", "গতকাল থেকে জ্বর", "গ্যাস্ট্রিক") — প্রথমে কী করবেন আর কখন ডাক্তার দেখাবেন জানাব। আপনার অ্যাপয়েন্টমেন্ট, ওষুধ, রিপোর্ট ও অর্ডারের খবরও দিতে পারি।');
 }
 
-async function reply(user, message) {
+async function reply(user, message, opts = {}) {
   const t = message.toLowerCase();
-  if (has(t, EMERGENCY)) {
+  // Reply in Bangla for Bangla or Banglish messages, or when the user has switched the app to Bangla.
+  const bn = isBangla(message) || isBanglish(message) || opts.lang === 'bn';
+  if (has(t, [...EMERGENCY, 'buke betha', 'buke batha', 'shas nite parchi na', 'osggan', 'ojnan'])) {
     return {
       flagged: true,
-      text: isBangla(message)
+      text: bn
         ? 'এটি জরুরি হতে পারে। এখনই 999 নম্বরে কল করুন অথবা নিকটস্থ জরুরি বিভাগে যান। একা থাকলে কাউকে পাশে ডাকুন।'
         : 'This could be an emergency. Call 999 now or go to the nearest emergency department. If you are alone, call someone to be with you.',
     };
@@ -162,18 +169,28 @@ async function reply(user, message) {
   // (neither the AI nor the built-in rules). Explain the conflict and send them to their doctor.
   const check = interactions.checkQuestion(user.id, message);
   if (check && check.conflicts.length) {
-    return { flagged: true, abstained: true, conflicts: check.conflicts, text: interactions.abstainText(check.conflicts, isBangla(message)) };
+    return { flagged: true, abstained: true, conflicts: check.conflicts, text: interactions.abstainText(check.conflicts, bn) };
   }
-  const caution = check && check.ruleOnly ? interactions.ruleOnlyText(check.ruleOnly, isBangla(message)) : '';
+  const caution = check && check.ruleOnly ? interactions.ruleOnlyText(check.ruleOnly, bn) : '';
+  const withCaution = (t) => (caution ? `${caution}\n\n${t}` : t);
+  // Personal medicine safety: allergies, conditions, current medicines and labs decide what may be suggested.
+  const personal = medsafety.forMessage(user.id, message);
+  // A question about a named medicine always gets the deterministic, record-based answer.
+  if (personal && personal.kind === 'drug') return { flagged: personal.drugs.some((d) => !d.ok), personal: true, text: withCaution(medsafety.render(personal, bn)) };
+  // A complaint (one or several): record-checked plan with sources; critical cases go to a doctor, with doctors suggested.
+  if (personal) return { flagged: !!personal.critical, personal: true, critical: !!personal.critical, text: withCaution(medsafety.render(personal, bn)) };
   const ctx = context(user.id);
   if (config.anthropicKey) {
     // Retrieve the matching first-aid entry; if the wording matches nothing, rewrite the query and retry.
     const { result: aid } = await correctiveRetrieve(message, adviceFor);
-    const text = await llmReply(user.id, message, ctx, aid);
-    if (text) return { flagged: false, text: caution ? `${caution}\n\n${text}` : text, ai: true };
+    const text = await llmReply(user.id, message, ctx, aid, medsafety.brief(personal) + (bn ? '\nThe user writes in Bangla or Banglish: reply in Bangla script (বাংলা).' : ''));
+    // Guardrail: if the AI mentions a medicine this patient must avoid, show the record-based answer instead.
+    const blocked = medsafety.blockedWords(personal);
+    const unsafe = text && blocked.some((w) => text.toLowerCase().includes(w.toLowerCase()));
+    if (text && !unsafe) return { flagged: false, text: withCaution(text), ai: true };
   }
-  const text = ruleReply(message, ctx);
-  return { flagged: false, text: caution ? `${caution}\n\n${text}` : text };
+  if (personal) return { flagged: false, personal: true, text: withCaution(medsafety.render(personal, bn)) };
+  return { flagged: false, text: withCaution(ruleReply(message, ctx, bn)) };
 }
 
-module.exports = { reply, isBangla };
+module.exports = { reply, isBangla, isBanglish };

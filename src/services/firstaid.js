@@ -3,7 +3,7 @@
 // Advice is general and safe; every answer says when to see a doctor.
 const TOPICS = [
   {
-    keys: ['headache', 'head ache', 'migraine', 'matha betha', 'মাথা ব্যথা', 'মাথাব্যথা', 'মাথা ধরে', 'মাইগ্রেন'],
+    keys: ['headache', 'head ache', 'migraine', 'matha betha', 'মাথা ব্যথা', 'মাথাব্যথা', 'মাথা ধরে', 'মাইগ্রেন', 'matha batha', 'mathabetha', 'mathabatha', 'matha bethа', 'matha dhore', 'mathay betha', 'mathay batha', 'মাথায় ব্যথা', 'মাথা ঘোরা', 'মাথা ঘুরছে', 'মাথা ধরা'],
     specialty: 'Neurology',
     en: `For a headache you can try first:
 • Drink 1–2 glasses of water; dehydration is a common cause.
@@ -21,7 +21,7 @@ See a doctor if: it is the worst headache of your life, comes with fever and sti
 ডাক্তার দেখান যদি: জীবনের সবচেয়ে তীব্র ব্যথা হয়, জ্বর ও ঘাড় শক্ত হয়ে যায়, দুর্বলতা, বিভ্রান্তি বা চোখে ঝাপসা দেখেন, মাথায় আঘাতের পর হয়, বা বারবার হয়।`,
   },
   {
-    keys: ['fever', 'temperature', 'jor', 'jwor', 'জ্বর', 'গা গরম'],
+    keys: ['fever', 'temperature', 'jor', 'jwor', 'জ্বর', 'গা গরম', 'jwr', 'jor ase', 'jor hoise', 'gaye jor', 'gay jor', 'জ্বর আসছে', 'জ্বর এসেছে', 'গায়ে জ্বর', 'শরীর গরম', 'তাপমাত্রা'],
     specialty: 'General Medicine',
     en: `For fever:
 • Rest and drink plenty of fluids: water, ORS, soup, fruit juice.
@@ -37,7 +37,7 @@ See a doctor if: fever lasts more than 3 days, is above 103°F (39.4°C), or com
 ডাক্তার দেখান যদি: ৩ দিনের বেশি জ্বর থাকে, ১০৩°F এর বেশি হয়, অথবা র‍্যাশ, রক্তপাত, তীব্র মাথাব্যথা, শ্বাসকষ্ট, বিভ্রান্তি বা বারবার বমি হয়। ডেঙ্গুর মৌসুমে NS1/CBC পরীক্ষা করান।`,
   },
   {
-    keys: ['cold', 'cough', 'sore throat', 'runny nose', 'flu', 'sordi', 'kashi', 'সর্দি', 'কাশি', 'গলা ব্যথা', 'ঠান্ডা লেগেছে'],
+    keys: ['cold', 'cough', 'sore throat', 'runny nose', 'flu', 'sordi', 'kashi', 'সর্দি', 'কাশি', 'গলা ব্যথা', 'ঠান্ডা লেগেছে', 'sordi', 'kashi', 'kasi', 'thanda', 'gola betha', 'gola batha', 'nak diye pani', 'হাঁচি', 'নাক দিয়ে পানি', 'গলা খুসখুস', 'ঠান্ডা'],
     specialty: 'General Medicine',
     en: `For cold, cough or sore throat:
 • Warm water with honey and lemon or ginger tea soothes the throat.
@@ -53,7 +53,7 @@ See a doctor if: cough lasts over 2 weeks, you cough blood, have breathing troub
 ডাক্তার দেখান যদি: ২ সপ্তাহের বেশি কাশি থাকে, কাশির সাথে রক্ত আসে, শ্বাসকষ্ট, তীব্র জ্বর বা বুকে ব্যথা হয়।`,
   },
   {
-    keys: ['stomach pain', 'stomach ache', 'acidity', 'gastric', 'heartburn', 'gas', 'pet betha', 'পেট ব্যথা', 'পেটে ব্যথা', 'গ্যাস', 'অ্যাসিডিটি', 'এসিডিটি', 'বুক জ্বালা'],
+    keys: ['stomach pain', 'stomach ache', 'acidity', 'gastric', 'heartburn', 'gas', 'pet betha', 'পেট ব্যথা', 'পেটে ব্যথা', 'গ্যাস', 'অ্যাসিডিটি', 'এসিডিটি', 'বুক জ্বালা', 'pet batha', 'pete betha', 'pete batha', 'pet kamrano', 'gastric er', 'ombol', 'buk jala', 'পেট কামড়', 'পেট ফাঁপা', 'অম্বল', 'হজমে সমস্যা', 'বদহজম'],
     specialty: 'Gastroenterology',
     en: `For acidity or stomach pain:
 • Eat small, light meals; avoid oily, spicy food, tea/coffee and smoking.
@@ -69,7 +69,7 @@ See a doctor if: pain is severe or on the lower right side, with fever, vomiting
 ডাক্তার দেখান যদি: তীব্র ব্যথা বা তলপেটের ডান দিকে ব্যথা হয়, জ্বর, রক্তবমি, কালো পায়খানা হয় বা ২ দিনের বেশি থাকে।`,
   },
   {
-    keys: ['diarrhea', 'diarrhoea', 'loose motion', 'vomiting', 'potla paikhana', 'ডায়রিয়া', 'পাতলা পায়খানা', 'বমি'],
+    keys: ['diarrhea', 'diarrhoea', 'loose motion', 'vomiting', 'potla paikhana', 'ডায়রিয়া', 'পাতলা পায়খানা', 'বমি', 'patla paikhana', 'paikhana', 'bomi', 'bomi bomi', 'vomit', 'ডায়রিয়া হয়েছে', 'পেট খারাপ', 'বমি বমি', 'বমি হচ্ছে'],
     specialty: 'Gastroenterology',
     en: `For diarrhoea or vomiting:
 • Drink ORS (oral saline) after every loose stool; sip slowly if vomiting.
@@ -85,7 +85,7 @@ See a doctor quickly if: there is blood in stool, high fever, no urine for 6+ ho
 দ্রুত ডাক্তার দেখান যদি: পায়খানায় রক্ত, তীব্র জ্বর, ৬ ঘণ্টার বেশি প্রস্রাব না হয়, খুব দুর্বল বা ঝিমুনি, চোখ বসে যায়, বা ২ দিনের বেশি থাকে।`,
   },
   {
-    keys: ['burn', 'pura', 'পুড়ে', 'পোড়া', 'ছ্যাঁকা'],
+    keys: ['burn', 'pura', 'পুড়ে', 'পোড়া', 'ছ্যাঁকা', 'puira', 'puire', 'pure geche', 'gorom pani', 'আগুনে পুড়', 'গরম পানি পড়ে'],
     specialty: 'General Medicine',
     en: `For a minor burn:
 • Hold it under cool running water for 20 minutes right away.
@@ -101,7 +101,7 @@ Go to hospital if: the burn is large, deep, on the face/hands/genitals, from ele
 হাসপাতালে যান যদি: পোড়া বড় বা গভীর হয়, মুখ/হাত/যৌনাঙ্গে হয়, বিদ্যুৎ বা কেমিক্যাল থেকে হয়, অথবা শিশু বা বয়স্ক কেউ পুড়ে যায়।`,
   },
   {
-    keys: ['cut', 'bleeding', 'wound', 'kete', 'কেটে', 'রক্ত পড়', 'ক্ষত'],
+    keys: ['cut', 'bleeding', 'wound', 'kete', 'কেটে', 'রক্ত পড়', 'ক্ষত', 'kata', 'kete geche', 'kete gese', 'kata geche', 'rokto', 'রক্ত পড়ছে', 'কাটা', 'কেটে গেছে', 'ছিলে গেছে'],
     specialty: 'General Medicine',
     en: `For a cut or bleeding:
 • Press firmly on the wound with a clean cloth for 10 minutes without lifting.
@@ -117,7 +117,7 @@ Go to hospital if: bleeding won't stop after 10 minutes of pressure, the cut is 
 হাসপাতালে যান যদি: ১০ মিনিট চাপের পরও রক্ত না থামে, ক্ষত গভীর বা হা হয়ে থাকে, নোংরা/মরিচা ধরা জিনিস বা পশুর কামড়ে হয়।`,
   },
   {
-    keys: ['sprain', 'twist', 'injury', 'fracture', 'broken', 'mochka', 'মচকে', 'মচকা', 'হাড় ভেঙে', 'ভেঙে গেছে', 'আঘাত'],
+    keys: ['sprain', 'twist', 'injury', 'fracture', 'broken', 'mochka', 'মচকে', 'মচকা', 'হাড় ভেঙে', 'ভেঙে গেছে', 'আঘাত', 'mochke', 'mochke geche', 'mochka khaise', 'vanga', 'venge', 'haddi', 'মচকে গেছে', 'পায়ে ব্যথা', 'হাতে ব্যথা', 'ফুলে গেছে'],
     specialty: 'Orthopedics',
     en: `For a sprain or suspected fracture:
 • Rest the injured part and don't put weight on it.
@@ -133,7 +133,7 @@ Go now if: there is deformity, the bone shows, severe pain/swelling, numbness, o
 এখনই যান যদি: অঙ্গ বেঁকে যায়, হাড় বের হয়ে আসে, তীব্র ব্যথা/ফোলা, অবশ লাগে বা নাড়াতে না পারেন।`,
   },
   {
-    keys: ['toothache', 'tooth pain', 'dat betha', 'দাঁতে ব্যথা', 'দাঁত ব্যথা'],
+    keys: ['toothache', 'tooth pain', 'dat betha', 'দাঁতে ব্যথা', 'দাঁত ব্যথা', 'dat batha', 'date betha', 'dant betha', 'দাঁতে ব্যাথা', 'মাড়ি ব্যথা'],
     specialty: 'Dentistry',
     en: `For toothache:
 • Rinse with warm salt water; floss gently to remove stuck food.
@@ -149,7 +149,7 @@ See a dentist if: pain lasts more than 2 days, with swelling, fever, pus or diff
 ডেন্টিস্ট দেখান যদি: ২ দিনের বেশি ব্যথা থাকে, ফোলা, জ্বর, পুঁজ হয় বা মুখ খুলতে কষ্ট হয়।`,
   },
   {
-    keys: ['rash', 'itch', 'allergy', 'hives', 'chulkani', 'চুলকানি', 'চুলকায়', 'এলার্জি', 'অ্যালার্জি', 'র‍্যাশ', 'ফুসকুড়ি'],
+    keys: ['rash', 'itch', 'allergy', 'hives', 'chulkani', 'চুলকানি', 'চুলকায়', 'এলার্জি', 'অ্যালার্জি', 'র‍্যাশ', 'ফুসকুড়ি', 'alergi', 'elargi', 'allergi', 'chulkay', 'chulkani hocche', 'gaye chulkani', 'lal dag', 'এলার্জি হয়েছে', 'গায়ে চুলকানি', 'লাল দাগ', 'চামড়ায় চুলকানি'],
     specialty: 'Dermatology',
     en: `For itching, rash or mild allergy:
 • Wash the area with plain water and mild soap; keep it dry.
@@ -165,7 +165,7 @@ Get help now if: lips, face or tongue swell, or breathing becomes difficult. See
 এখনই সাহায্য নিন যদি: ঠোঁট, মুখ বা জিভ ফুলে যায় বা শ্বাস নিতে কষ্ট হয়। ছড়িয়ে পড়লে বা এক সপ্তাহের বেশি থাকলে চর্মরোগ বিশেষজ্ঞ দেখান।`,
   },
   {
-    keys: ['back pain', 'neck pain', 'komor betha', 'কোমর ব্যথা', 'পিঠে ব্যথা', 'ঘাড় ব্যথা'],
+    keys: ['back pain', 'neck pain', 'komor betha', 'কোমর ব্যথা', 'পিঠে ব্যথা', 'ঘাড় ব্যথা', 'komor batha', 'pith betha', 'ghar betha', 'ghar batha', 'কোমরে ব্যথা', 'পিঠ ব্যথা', 'ঘাড়ে ব্যথা'],
     specialty: 'Orthopedics',
     en: `For back or neck pain:
 • Keep gently active; long bed rest makes it worse.
@@ -181,7 +181,7 @@ See a doctor if: pain spreads down the leg with numbness, after a fall, with fev
 ডাক্তার দেখান যদি: ব্যথা পায়ে নেমে যায় ও অবশ লাগে, পড়ে যাওয়ার পর হয়, জ্বর বা ওজন কমে, বা প্রস্রাবে সমস্যা হয়।`,
   },
   {
-    keys: ["can't sleep", 'insomnia', 'stress', 'anxiety', 'tension', 'ghum hoy na', 'ঘুম হয় না', 'ঘুম আসে না', 'টেনশন', 'দুশ্চিন্তা', 'মানসিক চাপ'],
+    keys: ["can't sleep", 'insomnia', 'stress', 'anxiety', 'tension', 'ghum hoy na', 'ঘুম হয় না', 'ঘুম আসে না', 'টেনশন', 'দুশ্চিন্তা', 'মানসিক চাপ', 'ghum ase na', 'ghum hoy na', 'tension', 'ghum kom', 'ঘুমের সমস্যা', 'অনিদ্রা'],
     specialty: 'Psychiatry',
     en: `For stress or poor sleep:
 • Keep the same sleep and wake time; no screens 1 hour before bed.
@@ -197,7 +197,7 @@ Get help if: low mood lasts more than 2 weeks, or you have thoughts of harming y
 সাহায্য নিন যদি: ২ সপ্তাহের বেশি মন খারাপ থাকে বা নিজের ক্ষতি করার চিন্তা আসে — ৯৯৯ বা 'কান পেতে রই' হেল্পলাইনে কল করুন।`,
   },
   {
-    keys: ['high blood pressure', 'high pressure', 'hypertension', 'bp high', 'প্রেশার বেড়', 'উচ্চ রক্তচাপ', 'প্রেশার হাই'],
+    keys: ['high blood pressure', 'high pressure', 'hypertension', 'bp high', 'প্রেশার বেড়', 'উচ্চ রক্তচাপ', 'প্রেশার হাই', 'pressure beshi', 'pressure high', 'presar', 'bp beshi', 'প্রেশার বেশি', 'রক্তচাপ বেশি'],
     specialty: 'Cardiology',
     en: `If your blood pressure is high:
 • Sit and rest for 5 minutes, then measure again.
@@ -211,7 +211,7 @@ Get help now if: BP is 180/120 or above, or you have chest pain, severe headache
 এখনই সাহায্য নিন যদি: প্রেশার ১৮০/১২০ বা বেশি হয়, অথবা বুকে ব্যথা, তীব্র মাথাব্যথা, শরীরের এক পাশ দুর্বল বা কথা জড়িয়ে যায় — ৯৯৯-এ কল করুন।`,
   },
   {
-    keys: ['low sugar', 'hypo', 'sugar low', 'সুগার কমে', 'সুগার ফল'],
+    keys: ['low sugar', 'hypo', 'sugar low', 'সুগার কমে', 'সুগার ফল', 'sugar kom', 'sugar kome', 'সুগার কম'],
     specialty: 'Endocrinology',
     en: `If blood sugar may be low (shaky, sweating, dizzy):
 • Take 15 g fast sugar now: half a glass of juice, 3 teaspoons of sugar in water, or glucose.
@@ -223,7 +223,7 @@ Call 999 if the person is drowsy, confused or cannot swallow.`,
 রোগী ঝিমিয়ে পড়লে, বিভ্রান্ত হলে বা গিলতে না পারলে ৯৯৯-এ কল করুন।`,
   },
   {
-    keys: ['period pain', 'menstrual pain', 'masik betha', 'মাসিকের ব্যথা', 'পিরিয়ডের ব্যথা'],
+    keys: ['period pain', 'menstrual pain', 'masik betha', 'মাসিকের ব্যথা', 'পিরিয়ডের ব্যথা', 'period betha', 'masik', 'মাসিক', 'পিরিয়ড'],
     specialty: 'Gynecology & Obstetrics',
     en: `For period pain:
 • A hot water bottle on the lower belly.
@@ -237,7 +237,7 @@ See a gynaecologist if: pain stops daily activities, bleeding is very heavy, per
 গাইনি ডাক্তার দেখান যদি: ব্যথায় দৈনন্দিন কাজ বন্ধ হয়ে যায়, খুব বেশি রক্তপাত হয়, মাসিক অনিয়মিত হয়, বা মাসিকের মাঝেও ব্যথা হয়।`,
   },
   {
-    keys: ['heat stroke', 'heatstroke', 'dehydration', 'gorom', 'হিট স্ট্রোক', 'পানিশূন্যতা', 'গরমে'],
+    keys: ['heat stroke', 'heatstroke', 'dehydration', 'gorom', 'হিট স্ট্রোক', 'পানিশূন্যতা', 'গরমে', 'gorome', 'pani shunnota', 'রোদে', 'হিটস্ট্রোক'],
     specialty: 'General Medicine',
     en: `For heat exhaustion or dehydration:
 • Move to a cool, shaded place; loosen clothes.
@@ -253,8 +253,25 @@ Call 999 if: the person is confused, faints, stops sweating or has a very high t
 ];
 // Bangla keys match anywhere (words inflect); English/Banglish keys match whole words.
 const hit = (t, k) => (/[\u0980-\u09FF]/.test(k) ? t.includes(k.normalize('NFC')) : new RegExp(`(^|[^a-z])${k.replace(/[.*+?^${}()|[\]\\']/g, '\\$&')}`, 'i').test(t));
+const norm = (m) => String(m || '').toLowerCase().normalize('NFC').replace(/ব্যাথ/g, 'ব্যথ').replace(/এ্যা/g, 'অ্যা').replace(/betha|bhetha|batha/g, (w) => w);
 function adviceFor(message) {
-  const t = String(message || '').toLowerCase().normalize('NFC');
-  return TOPICS.find((x) => x.keys.some((k) => hit(t, k))) || null;
+  const t = norm(message);
+  return TOPICS.find((x) => x.keys.some((k) => hit(t, k))) || allAdviceFor(message)[0] || null;
 }
-module.exports = { TOPICS, adviceFor };
+/** Every complaint mentioned in one message ("headache and stomach pain" -> two topics). */
+// "পেটে খুব ব্যথা", "matha onek batha": a body part plus a pain word anywhere in the message.
+const BODY_PAIN = [[/মাথা|\bmatha|\bmathay/, 'headache'], [/পেট|\bpet\b|\bpete\b|stomach|tummy/, 'stomach pain'], [/কোমর|পিঠ|ঘাড়|\bkomor|\bpith|\bghar\b|back|neck/, 'back pain'],
+  [/দাঁত|মাড়ি|\bdat\b|\bdate\b|tooth|teeth/, 'toothache'], [/গলা|\bgola\b|throat/, 'cold'], [/মাসিক|পিরিয়ড|period|\bmasik/, 'period pain']];
+const PAIN = /ব্যথা|ব্যাথা|যন্ত্রণা|\bbet?ha\b|\bbatha\b|\bbytha\b|pain|ache|hurts/;
+function allAdviceFor(message) {
+  const t = norm(message);
+  const found = TOPICS.filter((x) => x.keys.some((k) => hit(t, k)));
+  if (PAIN.test(t)) {
+    for (const [re, key] of BODY_PAIN) {
+      const topic = TOPICS.find((x) => x.keys[0] === key);
+      if (re.test(t) && topic && !found.includes(topic)) found.push(topic);
+    }
+  }
+  return found;
+}
+module.exports = { TOPICS, adviceFor, allAdviceFor };
