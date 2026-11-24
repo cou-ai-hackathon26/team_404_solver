@@ -1,72 +1,79 @@
 <%- include('../partials/top') %>
-<% const shareText = (l) => [l.share_reminders && 'Medicine reminders', l.share_vitals && 'Vitals', l.share_reports && 'Reports'].filter(Boolean).join(' · ') || 'Nothing'; %>
-<div class="page-h"><div><h1>Caregivers &amp; shared timeline</h1><p>Let a family member or carer follow your medicine reminders, vitals and reports on one shared timeline, and act for you if you allow it. You choose exactly what they see, and you can change or stop it at any time.</p></div>
-  <a class="btn" href="/care/timeline/<%= user.id %>"><%- icon('activity', 16) %> My shared timeline</a></div>
+<% const cap = (d) => d[0].toUpperCase() + d.slice(1); const sc = access.scopes; %>
+<div class="page-h"><div><h1><%= access.self ? 'My shared timeline' : patient.full_name + "'s timeline" %></h1>
+  <p><%= patient.patient_code || '' %><%= patient.blood_group ? ' · Blood ' + patient.blood_group : '' %><%= patient.emergency_contact ? ' · Emergency contact ' + patient.emergency_contact : '' %></p></div>
+  <div class="row" style="gap:8px">
+    <%- access.self ? pill('You', 'blue') : pill(access.canAct ? 'Caregiver · can act' : 'Caregiver · view only', access.canAct ? 'green' : 'amber') %>
+    <% if (!access.self && patient.phone) { %><a class="btn ghost sm" href="tel:<%= patient.phone %>"><%- icon('phone', 14) %> Call <%= patient.full_name.split(' ')[0] %></a><% } %>
+    <a class="btn ghost sm" href="tel:999" style="color:#b91c1c"><%- icon('ambulance', 14) %> 999</a>
+    <a class="btn ghost sm" href="/care"><%= user.role === 'caregiver' ? 'Care dashboard' : 'Caregivers' %></a></div></div>
 
-<div class="grid g3" style="gap:14px">
-  <div class="stat"><div class="top"><span class="tile sm t-pink"><%- icon('heart', 18) %></span></div><span class="lbl">My caregivers</span><span class="num"><%= mine.filter(m => m.status === 'active').length %></span><span class="sub"><%= mine.filter(m => m.status === 'pending').length %> invitation(s) waiting</span></div>
-  <div class="stat"><div class="top"><span class="tile sm t-blue"><%- icon('users', 18) %></span></div><span class="lbl">People I care for</span><span class="num"><%= people.length %></span><span class="sub"><%= invites.length %> new invitation(s)</span></div>
-  <div class="stat"><div class="top"><span class="tile sm t-teal"><%- icon('shield', 18) %></span></div><span class="lbl">Caregiver actions logged</span><span class="num"><%= log.length %></span><span class="sub">latest shown below</span></div>
-</div>
+<% if (!access.self) { %>
+  <div class="alert info"><b>You are viewing as <%= user.full_name %></b>, an approved caregiver. <%= patient.full_name %> shares: <b><%= [sc.reminders && 'medicine reminders', sc.vitals && 'vitals', sc.reports && 'reports'].filter(Boolean).join(', ') %></b>. Everything you see and do is recorded in their audit log<%= access.canAct ? ' and marked “by ' + user.full_name + '” on the timeline' : '' %>.</div>
+  <% if (newCount) { %><div class="alert success"><%- icon('sparkles', 16) %> <b><%= newCount %> new update<%= newCount > 1 ? 's' : '' %></b> since your last visit (<%= ago(since) %>). New items are marked <b>NEW</b> below.</div><% } %>
+<% } %>
 
-<% if (invites.length) { %>
-<section class="card mt" style="border:2px solid #f59e0b"><h2 style="margin-bottom:12px">Invitations for you</h2>
-  <% for (const l of invites) { %>
-    <div class="item"><%- avatar(l.full_name, 'md', l.patient_id) %><div class="grow"><b><%= l.full_name %></b> <span class="muted small">wants you as their caregiver (<%= l.relationship %>)</span>
-      <div class="meta">Shares: <%= shareText(l) %> · <%= l.can_act ? 'you may act for them' : 'view only' %> · consent given <%= ago(l.consent_at) %></div></div>
-      <form method="post" action="/care/links/<%= l.id %>/accept"><%- include('../partials/csrf') %><button class="btn sm">Accept</button></form>
-      <form method="post" action="/care/links/<%= l.id %>/decline"><%- include('../partials/csrf') %><button class="btn ghost sm">Decline</button></form></div>
-  <% } %>
+<% if (alerts.length) { %>
+<section class="card mt-s" style="border:2px solid #ef4444"><div class="card-h"><h2>Medicine safety alert</h2><%- pill('Ask the doctor', 'red') %></div>
+  <% for (const c of alerts) { %><div class="note blue mt-s"><%- icon('shield', 18) %><div><b><%= c.drugs.map(cap).join(' + ') %></b>: <%= c.why %>
+    <div class="small muted"><%= c.records.map(r => cap(r.generic) + ' ' + r.source).join(' · ') %></div></div></div><% } %>
+  <p class="small muted mt-s">The records and a drug-interaction rule disagree, so the Health AI will not give advice on these medicines. Contact the prescribing doctor or a pharmacist; do not stop or change a medicine without them.</p>
 </section>
 <% } %>
 
-<div class="grid g-main mt">
-  <section class="card"><div class="card-h"><h2>My caregivers</h2><%- pill(mine.filter(m => m.status === 'active').length + ' active') %></div>
-    <% if (!mine.length) { %><div class="empty small">You have not added a caregiver yet. Use the form to invite a family member or carer.</div><% } %>
-    <% for (const l of mine) { %>
-      <div class="card soft mt-s" style="padding:16px">
-        <div class="row between"><div class="row"><%- avatar(l.full_name, 'md', l.caregiver_id) %><div><b><%= l.full_name %></b> <span class="muted small"><%= l.relationship %> · <%= l.email %></span>
-          <div class="small"><%- badge(l.status === 'active' ? 'active' : 'pending', l.status === 'active' ? 'Active' : 'Waiting for them to accept') %> <%- l.caregiver_role === 'caregiver' ? pill('Caregiver account', 'purple') : '' %></div></div></div>
-          <form method="post" action="/care/links/<%= l.id %>/revoke" data-confirm="End this caregiver's access now?"><%- include('../partials/csrf') %><button class="btn danger sm">Revoke</button></form></div>
-        <div class="note blue mt-s"><%- icon('shield', 16) %><div><b>Consent receipt</b> · given <%= fmtDateTime(l.consent_at) %><br>Shared: <b><%= shareText(l) %></b> · <%= l.can_act ? 'Can act for you (mark doses, log readings)' : 'View only' %><%= l.last_viewed_at ? ' · Last viewed ' + ago(l.last_viewed_at) : '' %></div></div>
-        <form method="post" action="/care/links/<%= l.id %>/permission" class="row mt-s" style="gap:14px"><%- include('../partials/csrf') %><input type="hidden" name="scopes" value="1">
-          <label class="check"><input type="checkbox" name="share_reminders" value="1" <%= l.share_reminders ? 'checked' : '' %>> Reminders</label>
-          <label class="check"><input type="checkbox" name="share_vitals" value="1" <%= l.share_vitals ? 'checked' : '' %>> Vitals</label>
-          <label class="check"><input type="checkbox" name="share_reports" value="1" <%= l.share_reports ? 'checked' : '' %>> Reports</label>
-          <label class="check"><input type="checkbox" name="can_act" value="1" <%= l.can_act ? 'checked' : '' %>> Can act for me</label>
-          <button class="btn ghost sm">Save permissions</button></form>
-      </div>
+<div class="grid mt" style="grid-template-columns:1.4fr 1fr 1fr">
+  <section class="card"><div class="card-h"><h2>Today's doses</h2><% if (sc.reminders) { %><%- pill(adherence.pct === null ? 'No data' : adherence.pct + '% taken (7 days)', adherence.pct !== null && adherence.pct < 80 ? 'amber' : 'green') %><% } %></div>
+    <% if (!sc.reminders) { %><div class="empty small">Medicine reminders are not shared with you.</div><% } else if (!doses.length) { %><div class="empty small">No doses scheduled today.</div><% } %>
+    <% for (const d of doses) { %>
+      <div class="item"><span class="tile sm <%= d.status === 'taken' ? 't-teal' : d.status === 'skipped' || d.missed ? 't-red' : 't-orange' %>"><%- icon('pill', 16) %></span>
+        <div class="grow"><b><%= fmtTime(d.due_at) %> · <%= d.medicine_name %></b><div class="meta"><%= d.dose || '' %> · <%= d.status === 'due' ? (d.missed ? 'missed' : 'due') : d.status %><%= d.by ? ' by ' + d.by : '' %></div></div>
+        <% if (access.canAct && d.status !== 'taken') { %>
+          <form method="post" action="/care/timeline/<%= patient.id %>/dose/<%= d.id %>/taken"><%- include('../partials/csrf') %><button class="btn sm">Taken</button></form>
+          <% if (d.status === 'due') { %><form method="post" action="/care/timeline/<%= patient.id %>/dose/<%= d.id %>/skipped"><%- include('../partials/csrf') %><button class="btn ghost sm">Skip</button></form><% } %>
+        <% } %></div>
     <% } %>
   </section>
 
-  <section class="card soft"><h2 style="margin-bottom:12px">Add a caregiver</h2>
-    <form method="post" action="/care/invite"><%- include('../partials/csrf') %>
-      <label class="f">Caregiver's MediConnect email<input type="email" name="email" required placeholder="e.g. caregiver@mediconnect.local"></label>
-      <label class="f">Relationship<select name="relationship"><% for (const r of RELATIONSHIPS) { %><option><%= r %></option><% } %></select></label>
-      <b class="small">What can they see?</b>
-      <% for (const [k, label] of Object.entries(SCOPES)) { %><label class="check"><input type="checkbox" name="share_<%= k %>" value="1" checked> <%= label %></label><% } %>
-      <b class="small mt-s" style="display:block">What can they do?</b>
-      <label class="check"><input type="checkbox" name="can_act" value="1" checked> Act for me: mark doses taken/skipped and log vital readings</label>
-      <label class="check mt-s" style="background:#fff7ed;padding:10px;border-radius:10px"><input type="checkbox" name="consent" value="yes" required> I consent to share the items ticked above with this person. I understand I can change or stop this at any time.</label>
-      <button class="btn block mt-s">Send invitation</button>
-      <p class="muted small mt-s">They need a free <b>Caregiver</b> (or Patient) account. Nothing is shared until they accept. Every view and action they take is recorded in your audit log and shown on your timeline.</p>
-    </form>
+  <section class="card"><div class="card-h"><h2>Latest vitals</h2><%- pill('Fixed medical limits') %></div>
+    <% if (!sc.vitals) { %><div class="empty small">Vitals are not shared with you.</div><% } else { for (const [k, v] of Object.entries(vitals.kinds)) { %>
+      <div class="item"><div class="grow"><b><%= v.name %></b><div class="meta"><%= v.last ? fmt(v.last) + ' ' + v.unit + ' · ' + v.trend.dir + ' · ' + ago(v.last.measured_at) : 'No readings' %></div></div><% if (v.status) { %><%- badge(v.status.level) %><% } %></div>
+    <% } } %>
   </section>
+
+  <div class="stack">
+    <section class="card soft"><h2 style="margin-bottom:12px"><%= access.self ? 'Log a reading' : 'Log a reading for ' + patient.full_name.split(' ')[0] %></h2>
+      <% if (!access.canAct || !sc.vitals) { %><div class="empty small">View only. <%= patient.full_name %> has not allowed you to log readings.</div><% } else { %>
+      <form method="post" action="/care/timeline/<%= patient.id %>/reading"><%- include('../partials/csrf') %>
+        <label class="f">Type<select name="kind" data-reading-kind><% for (const [k, v] of Object.entries(vitals.kinds)) { %><option value="<%= k %>"><%= v.name %></option><% } %></select></label>
+        <div class="fgrid"><label class="f">Value <small data-unit></small><input name="value1" type="number" step="0.1" required></label>
+          <label class="f" data-for="bp">Diastolic (bottom)<input name="value2" type="number" step="1"></label>
+          <label class="f" data-for="sugar">When<select name="context"><option value="fasting">Fasting</option><option value="random">After meal / random</option></select></label></div>
+        <label class="f">Measured at<input type="datetime-local" name="measured_at" value="<%= toLocalInput() %>"></label>
+        <button class="btn block">Save reading</button></form><% } %>
+    </section>
+    <section class="card"><h2 style="margin-bottom:10px">Care note</h2>
+      <form method="post" action="/care/timeline/<%= patient.id %>/note"><%- include('../partials/csrf') %>
+        <label class="f"><textarea name="body" rows="3" maxlength="500" required placeholder="<%= access.self ? 'e.g. I will be out tonight, please remind me at 9 PM' : 'e.g. Gave the 9 PM dose after dinner; BP felt fine' %>"></textarea></label>
+        <button class="btn ghost block">Add to timeline</button></form>
+    </section>
+  </div>
 </div>
 
-<div class="grid g2 mt">
-  <section class="card"><div class="card-h"><h2>People I care for</h2><a class="btn ghost sm" href="/care?view=people">Care dashboard</a></div>
-    <% if (!people.length) { %><div class="empty small">Nobody yet. When someone invites you and you accept, they appear here.</div><% } %>
-    <% for (const l of people) { %>
-      <div class="item"><%- avatar(l.full_name, 'md', l.patient_id) %><div class="grow"><b><%= l.full_name %></b> <span class="muted small">you are their <%= l.relationship.toLowerCase() %> caregiver</span>
-        <div class="meta"><%- pill({ red: 'Needs attention', amber: 'Keep an eye on', green: 'All good' }[l.s.level], { red: 'red', amber: 'amber', green: 'green' }[l.s.level]) %> <%= l.can_act ? 'Can act' : 'View only' %></div></div>
-        <a class="btn sm" href="/care/timeline/<%= l.patient_id %>">Open timeline</a>
-        <form method="post" action="/care/links/<%= l.id %>/revoke" data-confirm="Stop being this person's caregiver?"><%- include('../partials/csrf') %><button class="btn ghost sm">Step down</button></form></div>
-    <% } %>
-  </section>
-  <section class="card"><div class="card-h"><h2>What caregivers did</h2><%- pill('Audit log', 'gray') %></div>
-    <% if (!log.length) { %><div class="empty small">No caregiver activity yet.</div><% } %>
-    <div class="timeline"><% for (const l of log) { %><div class="tl"><span class="dot"></span><b style="font-size:14.5px"><%= l.full_name %> · <%= { 'caregiver.timeline_view': 'viewed your timeline', 'caregiver.dose_taken': 'marked a dose taken', 'caregiver.dose_skipped': 'marked a dose skipped', 'caregiver.reading_logged': 'logged a reading', 'caregiver.note': 'added a care note', 'caregiver.accepted': 'accepted your invitation', 'caregiver.document_view': 'opened a document', 'caregiver.revoked': 'ended the link', 'caregiver.declined': 'declined the invitation' }[l.action] || l.action %></b><span class="small"><%= fmtDateTime(l.created_at) %></span></div><% } %></div>
-  </section>
-</div>
+<section class="card mt"><div class="card-h"><h2>Shared timeline</h2>
+  <div class="row" style="gap:6px">
+    <% for (const [k, lbl, ok] of [['all','All',true],['dose','Reminders',sc.reminders],['vital','Vitals',sc.vitals],['report','Reports',sc.reports],['appointment','Appointments',true],['note','Notes',true]]) { if (!ok) continue; %>
+      <a class="btn <%= filter === k ? '' : 'ghost' %> sm" href="?type=<%= k %>&days=<%= days %>"><%= lbl %></a><% } %>
+    <% for (const n of [3,7,14,30]) { %><a class="btn <%= days === n ? '' : 'ghost' %> sm" href="?type=<%= filter %>&days=<%= n %>"><%= n %> days</a><% } %></div></div>
+  <% if (!events.length) { %><div class="empty small">Nothing in this period.</div><% } %>
+  <div class="timeline"><% let day = ''; for (const e of events) { const dd = fmtDate(e.at); if (dd !== day) { day = dd; %><div class="small muted mt-s" style="font-weight:700"><%= dd %></div><% } %>
+    <div class="tl"><span class="dot <%= e.tone %>"></span><b style="font-size:14.5px"><%- icon(e.icon, 14) %> <%= e.title %><% if (since && e.at > since && e.byId !== user.id && e.at <= new Date().toISOString()) { %> <span class="badge green">NEW</span><% } %></b>
+      <span class="small"><%= fmtTime(e.at) %> · <%= e.detail %><% if (e.by) { %> · <b>by <%= e.by %> (caregiver)</b><% } %><% if (e.link) { %> · <a href="<%= e.link %>" target="_blank">Open</a><% } %></span></div>
+  <% } %></div>
+</section>
+
+<section class="card mt"><div class="card-h"><h2>Care team</h2><% if (access.self) { %><a class="btn ghost sm" href="/care">Manage</a><% } %></div>
+  <div class="item"><%- avatar(patient.full_name, 'md', patient.id) %><div class="grow"><b><%= patient.full_name %></b><div class="meta">Patient · owns this timeline and decides who sees it</div></div></div>
+  <% for (const c of caregivers) { %><div class="item"><%- avatar(c.full_name, 'md', c.caregiver_id) %><div class="grow"><b><%= c.full_name %></b><div class="meta"><%= c.relationship %> · <%= c.can_act ? 'can act' : 'view only' %> · sees <%= [c.share_reminders && 'reminders', c.share_vitals && 'vitals', c.share_reports && 'reports'].filter(Boolean).join(', ') %></div></div></div><% } %>
+  <% if (!caregivers.length) { %><div class="empty small">No caregivers yet.</div><% } %>
+</section>
 <%- include('../partials/bottom') %>
