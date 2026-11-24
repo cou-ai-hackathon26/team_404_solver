@@ -21,9 +21,6 @@
       <label class="f">Phone number<%= R.channel === 'sms' ? ' (code is sent here)' : '' %><input name="phone" value="<%= F('phone') %>" required placeholder="01XXXXXXXXX" autocomplete="tel"></label>
     </div>
 
-    <% if (role === 'caregiver') { %>
-      <div class="note blue" style="margin-bottom:14px"><%- icon('heart', 18) %><div><b>How it works:</b> after you verify your email, the person you look after invites you from their <b>Caregivers &amp; Timeline</b> page using this email. Once you accept, you see their medicine reminders, vitals and reports on one timeline, and can act for them if they allow it.</div></div>
-    <% } %>
     <% if (role === 'patient') { %>
       <div class="fgrid">
         <label class="f">Date of birth<input type="date" name="date_of_birth" value="<%= F('date_of_birth') %>" required></label>

@@ -41,7 +41,8 @@ const config = {
     twilioToken: process.env.TWILIO_AUTH_TOKEN || '',
     twilioFrom: process.env.TWILIO_FROM || '',
   },
-  devShowOtp: String(process.env.DEV_SHOW_OTP ?? 'true').toLowerCase() === 'true',
+  // Show the OTP on the page only for automated tests. Off by default: the code goes to email (or the terminal).
+  devShowOtp: String(process.env.SHOW_OTP_ON_PAGE ?? 'false').toLowerCase() === 'true',
   otp: {
     expiryMinutes: int(process.env.OTP_EXPIRY_MINUTES, 5),
     maxAttempts: int(process.env.OTP_MAX_ATTEMPTS, 5),

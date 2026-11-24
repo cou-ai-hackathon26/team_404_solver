@@ -10,7 +10,7 @@ const ROOT = path.join(__dirname, '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mediconnect-test-'));
 const PORT = 3900 + Math.floor(Math.random() * 90);
 const BASE = `http://127.0.0.1:${PORT}`;
-const env = { ...process.env, PORT: String(PORT), DB_FILE: path.join(tmp, 'test.db'), UPLOAD_DIR: path.join(tmp, 'uploads'), NODE_ENV: 'development', ANTHROPIC_API_KEY: '', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '', DEV_SHOW_OTP: 'true' };
+const env = { ...process.env, PORT: String(PORT), DB_FILE: path.join(tmp, 'test.db'), UPLOAD_DIR: path.join(tmp, 'uploads'), NODE_ENV: 'development', ANTHROPIC_API_KEY: '', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '', DEV_SHOW_OTP: 'true', SHOW_OTP_ON_PAGE: 'true' };
 
 let passed = 0; let failed = 0;
 let sqlite = null;

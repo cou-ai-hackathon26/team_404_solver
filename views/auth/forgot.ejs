@@ -15,7 +15,7 @@
   <h2>Enter the code</h2>
   <% if (step === 2) { %>
   <p class="sub">Sent to <%= email %></p>
-  <% if (devOtp) { %><div class="alert info small">Development mode: your code is <code><%= devOtp %></code>.</div><% } %>
+  <% if (devOtp) { %><div class="alert info small">Test mode code: <code><%= devOtp %></code></div><% } %>
   <form method="post" action="/verify-otp"><%- include('../partials/csrf') %>
     <input type="hidden" name="code" id="reset-code">
     <div class="otp-boxes" data-otp="#reset-code"><% for (let i = 0; i < 6; i++) { %><input inputmode="numeric" maxlength="1" aria-label="Digit <%= i + 1 %>"><% } %></div>

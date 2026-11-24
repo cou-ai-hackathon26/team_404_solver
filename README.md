@@ -121,7 +121,7 @@ Maps need internet for the map tiles. Voice uses the browser’s speech engine; 
 | `SMTP_*`, `MAIL_FROM` | Gmail sending (see section 2) |
 | `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_SENDER_ID` | SMS for medical shops and ambulances |
 | `ANTHROPIC_API_KEY` | Optional: Claude for the Health AI and doctor matching |
-| `DEV_SHOW_OTP` | Show the code on the page while email/SMS is in console mode |
+| `SHOW_OTP_ON_PAGE` | Tests only: show the code on the page (default off; without email the code is printed in the terminal) |
 | `TZ` | Time zone (Asia/Dhaka) |
 
 ---
